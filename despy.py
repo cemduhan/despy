@@ -3,6 +3,7 @@ import random
 import heapq
 import collections
 import math
+import distribution as dis
 
 def simulate():
 
@@ -17,7 +18,7 @@ def simulate():
 
       print()
       print("--------------")
-      print("STATE:\n",state)
+      #print("STATE:\n",state)
 
       cevent = heapq.heappop(state.FEL)
 
@@ -83,8 +84,8 @@ class StateVars:
         s += "   clock: {0:.4f}\n".format(self.clock)
         s += "   termn: {0: 6}\n".format(self.terminate_counter)
         s += "     FEL: {0}\n".format(str(self.FEL))
-        s += "  ulists: {0}\n".format(str(self.userlists))
-        s += "  queues: {0}\n".format(str(self.queues))
+        #s += "  ulists: {0}\n".format(str(self.userlists))
+        #s += "  queues: {0}\n".format(str(self.queues))
         s += "  blocks:\n"
         for i,block in enumerate(self.blocks):
             s += "        {0: 3}: {1}\n".format(i,block)
@@ -131,3 +132,70 @@ class Block:
 
         s = "[{}({}): {}]".format(type(self).__name__,self.blockno,self.transactions)
         return s
+
+class GenerateUniformBlock(Block):
+
+    def __init__(self,lowest_interarrival,highest_interarrival, seed=100.99107 , mulp=42.4242, add=1001.1199):
+
+        Block.__init__(self)
+        self.dist=dis.UniformDistribution(lowest_interarrival,highest_interarrival, seed, mulp, add)
+
+    def setup(self):
+        Block.setup(self)
+        self.bootstrap()
+
+    def bootstrap(self):
+        inter_arrival = self.dist.bootstrap()
+        self.dist.SetSeed(inter_arrival)
+        print(inter_arrival)
+        #print(inter_arrival,file=self.ffs)
+
+        fevent = (inter_arrival+state.clock,-1,self.blockno,Transaction())
+        heapq.heappush(state.FEL,fevent)
+
+    def enter(self,transaction):
+
+        Block.enter(self,transaction)
+        self.bootstrap()
+        self.enter_next_block(transaction)
+
+class GenerateExponentialBlock(Block):
+
+    def __init__(self,lambda_parameter=1.75):
+
+        Block.__init__(self)
+        self.dist=dis.ExponentialDistribution(lambda_parameter)
+        print("DES INIT")
+
+    def setup(self):
+        Block.setup(self)
+        self.bootstrap()
+
+    def bootstrap(self):
+        inter_arrival = self.dist.bootstrap()
+        self.dist.SetSeed(inter_arrival)
+        print(inter_arrival)
+        #print(inter_arrival,file=self.ffs)
+
+        fevent = (inter_arrival+state.clock,-1,self.blockno,Transaction())
+        heapq.heappush(state.FEL,fevent)
+
+    def enter(self,transaction):
+
+        Block.enter(self,transaction)
+        self.bootstrap()
+        self.enter_next_block(transaction)
+
+class TerminateBlock(Block):
+
+    def __init__(self,decrement):
+
+        Block.__init__(self)
+        self.decrement = decrement
+
+    def enter(self,transaction):
+
+        Block.enter(self,transaction)
+
+        state.terminate_counter -= self.decrement
+        self.transactions.clear()
