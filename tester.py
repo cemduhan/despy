@@ -1,6 +1,3 @@
-#an example model and experiment in the vaccination stocks scenario
-
-from __future__ import print_function #ensure print functions are like Python 3
 import despy as DES
 from matplotlib import pyplot
 from matplotlib.pyplot import hist,title,xlabel,ylabel,xlim,ylim

@@ -20,6 +20,7 @@ class UniformDistribution():
         #basic linear congruential generator
         inter_arrival = ((self.seed * self.mulp) + self.add) % (self.highest_interarrival - self.lowest_interarrival)
         inter_arrival = inter_arrival + self.lowest_interarrival
+        #print(self.seed)
         self.seed = inter_arrival
         #print(self.seed, self.mulp, self.add, self.highest_interarrival, self.lowest_interarrival)
         #print(inter_arrival)
@@ -34,7 +35,23 @@ class ExponentialDistribution():
     def SetLambda(self, lambda_parameter):
         self.lambda_parameter=lambda_parameter
 
-    def bootstrap(self):
+class Probability():
+
+    def __init__(self, probability=0.5):
+
+        self.chance=probability
+
+    def SetSeed(self, seed=76845326783425):#not recommended but avalible
+        random.seed(seed)
+
+    def SetChance(self, probability=0.5):
+        self.probability=probability
+
+
+    def roll(self):
 
         r = random.random()
-        inter_arrival = -(1.0/self.lambda_parameter) * math.log(r)
+        if self.chance >= r:
+            return True
+        else:
+            return False

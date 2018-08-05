@@ -174,7 +174,7 @@ class GenerateExponentialBlock(Block):
     def bootstrap(self):
         inter_arrival = self.dist.bootstrap()
         self.dist.SetSeed(inter_arrival)
-        print(inter_arrival)
+        #print(inter_arrival)
         #print(inter_arrival,file=self.ffs)
 
         fevent = (inter_arrival+state.clock,-1,self.blockno,Transaction())
@@ -199,3 +199,24 @@ class TerminateBlock(Block):
 
         state.terminate_counter -= self.decrement
         self.transactions.clear()
+
+class TransferBlock(Block):
+
+    def __init__(self,probability,target_block):
+
+        Block.__init__(self)
+        self.target_block = target_block
+        self.prob=dis.Probability(probability)
+
+    def enter(self,transaction):
+
+        Block.enter(self,transaction)
+
+        if self.prob.roll():
+
+            fevent = (state.clock,self.blockno,self.target_block,transaction)
+            heapq.heappush(state.FEL,fevent)
+
+        else:
+
+            self.enter_next_block()
