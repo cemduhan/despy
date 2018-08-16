@@ -4,9 +4,17 @@ import collections
 import math
 
 class Distribution(object):
-    def factory(type):
-        if type == "Uniform": return UniformDistribution()
-        if type == "Exponential": return ExponentialDistribution()
+    def factory(type,lowest_interarrival,highest_interarrival, seed , mulp, add):
+        if type == "Uniform":
+            Dist = UniformDistribution()
+            Dist.SetVariables(lowest_interarrival,highest_interarrival, seed , mulp, add)
+            return Dist
+
+        if type == "Exponential":
+            Dist = ExponentialDistribution()
+            Dist.SetVariables(lowest_interarrival,highest_interarrival, seed)
+            return Dist
+
         assert 0, "Bad Distribution: " + type
     factory = staticmethod(factory)
 
@@ -29,6 +37,9 @@ class UniformDistribution(Distribution):
 
     def bootstrap(self):
         #basic linear congruential generator
+        if self.highest_interarrival - self.lowest_interarrival == 0:
+            return self.highest_interarrival
+
         inter_arrival = ((self.seed * self.mulp) + self.add) % (self.highest_interarrival - self.lowest_interarrival)
         inter_arrival = inter_arrival + self.lowest_interarrival
         #print(self.seed)
@@ -50,7 +61,8 @@ class ExponentialDistribution(Distribution):
         self.lambda_parameter=lambda_parameter
 
     def bootstrap(self):
-        inter_arrival=(math.e**-self.lambda_parameter)#% (self.highest_interarrival - self.lowest_interarrival);
+        r = random.random()
+        inter_arrival = -(1.0/self.lambda_parameter) * math.log(r)#% (self.highest_interarrival - self.lowest_interarrival);
         #inter_arrival = inter_arrival + self.lowest_interarrival;
         self.lambda_parameter=inter_arrival;
         return inter_arrival

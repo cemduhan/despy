@@ -55,6 +55,17 @@ class Transaction:
 
         return self.id < other.id
 
+class UserList:
+
+    def __init__(self):
+
+        self.waiting_transactions = []
+
+    def __repr__(self):
+
+        s = "UserList: {}".format(self.waiting_transactions)
+        return s
+
 class StateVars:
 
     def __init__(self):
@@ -67,6 +78,7 @@ class StateVars:
         self.terminate_counter = None # set this yourself or be sorry later
         self.FEL=[] # future event list
         #self.delay_list = []
+        self.userlists= {}
         self.blocks = []
         self.genid = idgen()
         self.genblockid = idgen()
@@ -84,8 +96,8 @@ class StateVars:
         s += "   clock: {0:.4f}\n".format(self.clock)
         s += "   termn: {0: 6}\n".format(self.terminate_counter)
         s += "     FEL: {0}\n".format(str(self.FEL))
-        #s += "  ulists: {0}\n".format(str(self.userlists))
-        #s += "  queues: {0}\n".format(str(self.queues))
+        s += "  ulists: {0}\n".format(str(self.userlists))
+        s += "  queues: {0}\n".format(str(self.queues))
         s += "  blocks:\n"
         for i,block in enumerate(self.blocks):
             s += "        {0: 3}: {1}\n".format(i,block)
@@ -138,9 +150,7 @@ class GenerateBlock(Block):
     def __init__(self,type, lowest_interarrival=0,highest_interarrival=15, seed=100.99107 , mulp=42.4242, add=1001.1199):
 
         Block.__init__(self)
-        self.dist = dis.Distribution.factory(type);
-        if type == "Uniform": self.dist.SetVariables(lowest_interarrival,highest_interarrival, seed , mulp, add);
-        if type == "Exponential": self.dist.SetVariables(lowest_interarrival,highest_interarrival, seed);
+        self.dist = dis.Distribution.factory(type,lowest_interarrival,highest_interarrival, seed , mulp, add);
 
 
     def setup(self):
@@ -195,3 +205,64 @@ class TransferBlock(Block):
         else:
 
             self.enter_next_block()
+
+class AdvanceBlock(Block):
+
+    def __init__(self,type, lowest_interarrival=0,highest_interarrival=15, seed=100.99107 , mulp=42.4242, add=1001.1199):
+
+        Block.__init__(self)
+        self.dist = dis.Distribution.factory(type,lowest_interarrival,highest_interarrival, seed , mulp, add);
+
+    def enter(self,transaction):
+
+        Block.enter(self,transaction)
+        advance = self.dist.bootstrap()
+        print(advance)
+        fevent = (state.clock+advance,self.blockno,self.blockno+1,transaction)
+        heapq.heappush(state.FEL,fevent)
+
+class LinkBlock(Block):
+
+    def __init__(self,listname):
+
+        Block.__init__(self)
+        self.listname = listname
+        state.userlists[listname]=UserList()
+
+    def setup(self):
+
+        Block.setup(self)
+        del state.userlists[self.listname].waiting_transactions[:]
+
+    def enter(self,transaction):
+
+        Block.enter(self,transaction)
+
+        state.userlists[self.listname].waiting_transactions.append(transaction)
+
+class UnlinkBlockFIFO(Block):
+
+    def __init__(self,listname,target_block,alternative_block):
+
+        Block.__init__(self)
+        self.listname = listname
+        self.target_block = target_block
+        self.alternative_block = alternative_block
+
+    def enter(self,transaction):
+
+        Block.enter(self,transaction)
+
+        if len(state.userlists[self.listname].waiting_transactions)>0:
+
+            unlinked_transaction = state.userlists[self.listname].waiting_transactions.pop(0)
+
+            fevent = (state.clock,unlinked_transaction.current_block,self.target_block,unlinked_transaction)
+            heapq.heappush(state.FEL,fevent)
+
+            self.enter_next_block(transaction)
+
+        else:
+
+            fevent = (state.clock,self.blockno,self.alternative_block,transaction)
+            heapq.heappush(state.FEL,fevent)
