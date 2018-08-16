@@ -120,7 +120,7 @@ class Block:
 
     def enter(self,transaction):
 
-        #print("{:12.2f}".format(state.clock),":","transaction {:6}".format(transaction.id),"entered block {:3}".format(self.blockno),"(",type(self).__name__,")")
+        print("{:12.2f}".format(state.clock),":","transaction {:6}".format(transaction.id),"entered block {:3}".format(self.blockno),"(",type(self).__name__,")")
         return 1
 
     def enter_next_block(self,transaction):
@@ -133,12 +133,15 @@ class Block:
         s = "[{}({}): {}]".format(type(self).__name__,self.blockno,self.transactions)
         return s
 
-class GenerateUniformBlock(Block):
+class GenerateBlock(Block):
 
-    def __init__(self,lowest_interarrival,highest_interarrival, seed=100.99107 , mulp=42.4242, add=1001.1199):
+    def __init__(self,type, lowest_interarrival=0,highest_interarrival=15, seed=100.99107 , mulp=42.4242, add=1001.1199):
 
         Block.__init__(self)
-        self.dist=dis.UniformDistribution(lowest_interarrival,highest_interarrival, seed, mulp, add)
+        self.dist = dis.Distribution.factory(type);
+        if type == "Uniform": self.dist.SetVariables(lowest_interarrival,highest_interarrival, seed , mulp, add);
+        if type == "Exponential": self.dist.SetVariables(lowest_interarrival,highest_interarrival, seed);
+
 
     def setup(self):
         Block.setup(self)
@@ -146,35 +149,7 @@ class GenerateUniformBlock(Block):
 
     def bootstrap(self):
         inter_arrival = self.dist.bootstrap()
-        self.dist.SetSeed(inter_arrival)
         print(inter_arrival)
-        #print(inter_arrival,file=self.ffs)
-
-        fevent = (inter_arrival+state.clock,-1,self.blockno,Transaction())
-        heapq.heappush(state.FEL,fevent)
-
-    def enter(self,transaction):
-
-        Block.enter(self,transaction)
-        self.bootstrap()
-        self.enter_next_block(transaction)
-
-class GenerateExponentialBlock(Block):
-
-    def __init__(self,lambda_parameter=1.75):
-
-        Block.__init__(self)
-        self.dist=dis.ExponentialDistribution(lambda_parameter)
-        print("DES INIT")
-
-    def setup(self):
-        Block.setup(self)
-        self.bootstrap()
-
-    def bootstrap(self):
-        inter_arrival = self.dist.bootstrap()
-        self.dist.SetSeed(inter_arrival)
-        #print(inter_arrival)
         #print(inter_arrival,file=self.ffs)
 
         fevent = (inter_arrival+state.clock,-1,self.blockno,Transaction())

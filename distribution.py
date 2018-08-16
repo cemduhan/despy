@@ -3,18 +3,29 @@ import heapq
 import collections
 import math
 
-class UniformDistribution():
+class Distribution(object):
+    def factory(type):
+        if type == "Uniform": return UniformDistribution()
+        if type == "Exponential": return ExponentialDistribution()
+        assert 0, "Bad Distribution: " + type
+    factory = staticmethod(factory)
 
-    def __init__(self,lowest_interarrival,highest_interarrival, seed=100.99107 , mulp=42.4242, add=1001.1199 ):
+class UniformDistribution(Distribution):
 
+    def __init__(self):
+
+        self.lowest_interarrival=0
+        self.highest_interarrival=15
+        self.seed = 100.99107
+        self.mulp = 42.4242
+        self.add = 1001.1199
+
+    def SetVariables(self, lowest_interarrival=0,highest_interarrival=15, seed=100.99107 , mulp=42.4242, add=1001.1199 ):
         self.lowest_interarrival=lowest_interarrival
         self.highest_interarrival=highest_interarrival
         self.seed = seed
         self.mulp = mulp
         self.add = add
-
-    def SetSeed(self, seed=873.3546):
-        self.seed=seed;
 
     def bootstrap(self):
         #basic linear congruential generator
@@ -26,14 +37,23 @@ class UniformDistribution():
         #print(inter_arrival)
         return inter_arrival
 
-class ExponentialDistribution():
+class ExponentialDistribution(Distribution):
 
-    def __init__(self,lambda_parameter=1.3):
+    def __init__(self):
+        self.lowest_interarrival=0
+        self.highest_interarrival=15
+        self.lambda_parameter=1.3
 
+    def SetVariables(self,lowest_interarrival=0,highest_interarrival=15, lambda_parameter=1.3):
+        self.lowest_interarrival=lowest_interarrival
+        self.highest_interarrival=highest_interarrival
         self.lambda_parameter=lambda_parameter
 
-    def SetLambda(self, lambda_parameter):
-        self.lambda_parameter=lambda_parameter
+    def bootstrap(self):
+        inter_arrival=(math.e**-self.lambda_parameter)#% (self.highest_interarrival - self.lowest_interarrival);
+        #inter_arrival = inter_arrival + self.lowest_interarrival;
+        self.lambda_parameter=inter_arrival;
+        return inter_arrival
 
 class Probability():
 
