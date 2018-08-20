@@ -242,13 +242,13 @@ class LinkBlock(Block):
         state.userlists[self.listname].waiting_transactions.append(transaction)
 
 class UnlinkBlock(object):
-    def factory(type):
+    def factory(type,listname,target_block,alternative_block):
         if type == "FIFO":
-            Unlink = UnlinkBlockFIFO()
+            Unlink = UnlinkBlockFIFO(listname,target_block,alternative_block)
             return Unlink
 
         if type == "LIFO":
-            Unlink = UnlinkBlockLIFO()
+            Unlink = UnlinkBlockLIFO(listname,target_block,alternative_block)
             return Unlink
 
         assert 0, "Bad Distribution: " + type
