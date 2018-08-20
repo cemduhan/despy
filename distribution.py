@@ -83,7 +83,7 @@ class Probability():
     def roll(self):
 
         r = random.random()
-        if self.chance >= r:
+        if self.chance >= r*100:
             return True
         else:
             return False
