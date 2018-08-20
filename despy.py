@@ -3,6 +3,7 @@ import random
 import heapq
 import collections
 import math
+from collections import deque
 import distribution as dis
 
 def simulate():
@@ -59,7 +60,7 @@ class UserList:
 
     def __init__(self):
 
-        self.waiting_transactions = []
+        self.waiting_transactions = deque()
 
     def __repr__(self):
 
@@ -232,13 +233,26 @@ class LinkBlock(Block):
     def setup(self):
 
         Block.setup(self)
-        del state.userlists[self.listname].waiting_transactions[:]
+        state.userlists[self.listname].waiting_transactions.clear()
 
     def enter(self,transaction):
 
         Block.enter(self,transaction)
 
         state.userlists[self.listname].waiting_transactions.append(transaction)
+
+class UnlinkBlock(object):
+    def factory(type):
+        if type == "FIFO":
+            Unlink = UnlinkBlockFIFO()
+            return Unlink
+
+        if type == "LIFO":
+            Unlink = UnlinkBlockLIFO()
+            return Unlink
+
+        assert 0, "Bad Distribution: " + type
+    factory = staticmethod(factory)
 
 class UnlinkBlockFIFO(Block):
 
@@ -255,7 +269,34 @@ class UnlinkBlockFIFO(Block):
 
         if len(state.userlists[self.listname].waiting_transactions)>0:
 
-            unlinked_transaction = state.userlists[self.listname].waiting_transactions.pop(0)
+            unlinked_transaction = state.userlists[self.listname].waiting_transactions.popleft()
+
+            fevent = (state.clock,unlinked_transaction.current_block,self.target_block,unlinked_transaction)
+            heapq.heappush(state.FEL,fevent)
+
+            self.enter_next_block(transaction)
+
+        else:
+
+            fevent = (state.clock,self.blockno,self.alternative_block,transaction)
+            heapq.heappush(state.FEL,fevent)
+
+class UnlinkBlockLIFO(Block):
+
+    def __init__(self,listname,target_block,alternative_block):
+
+        Block.__init__(self)
+        self.listname = listname
+        self.target_block = target_block
+        self.alternative_block = alternative_block
+
+    def enter(self,transaction):
+
+        Block.enter(self,transaction)
+
+        if len(state.userlists[self.listname].waiting_transactions)>0:
+
+            unlinked_transaction = state.userlists[self.listname].waiting_transactions.pop()
 
             fevent = (state.clock,unlinked_transaction.current_block,self.target_block,unlinked_transaction)
             heapq.heappush(state.FEL,fevent)
