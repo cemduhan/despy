@@ -11,33 +11,33 @@ def simulate():
     for block in state.blocks:
         block.setup()
 
-    cntr=0
+    cntr = 0
 
     #main simulation loop - grab next event off future event list and process
-    while len(state.FEL)>0 and state.terminate_counter>0:
+    while len(state.FEL) > 0 and state.terminate_counter > 0:
 
 
 
-      print("--------------------------------------------------------------------------")
-      #Debugging Setting
-      if state.debugging:
-        print("STATE:\n",state)
+        print("--------------------------------------------------------------------------")
+        #Debugging Setting
+        if state.debugging:
+            print("STATE:\n",state)
 
-      cevent = heapq.heappop(state.FEL)
+        cevent = heapq.heappop(state.FEL)
 
-      state.clock=cevent[0]
+        state.clock=cevent[0]
 
-      source_block = cevent[1]
-      target_block = cevent[2]
-      transaction = cevent[3]
+        source_block = cevent[1]
+        target_block = cevent[2]
+        transaction = cevent[3]
 
-      if source_block != -1:
-          state.blocks[source_block].transactions.remove(transaction)
-      state.blocks[target_block].enter(transaction)
-      state.blocks[target_block].transactions.add(transaction)
-      transaction.current_block = target_block
+        if source_block != -1:
+            state.blocks[source_block].transactions.remove(transaction)
+        state.blocks[target_block].enter(transaction)
+        state.blocks[target_block].transactions.add(transaction)
+        transaction.current_block = target_block
 
-      cntr+=1
+        cntr += 1
 
     print("--------------------------------------------------------------------------")
 
@@ -93,7 +93,7 @@ class StateVars:
     def add_block(self,block):
 
         ind = len(self.blocks)
-        assert(ind==block.blockno)
+        assert(ind == block.blockno)
         self.blocks.append(block)
 
     def __repr__(self):
@@ -115,14 +115,14 @@ class StateVars:
 # just a utility generator to return IDs in order
 def idgen():
 
-    id=0
+    id = 0
     while True:
         yield id
-        id+=1
+        id += 1
 
 # this is a global object and we never replace it, just clear it
 # just because I don't like using the global keyword I guess??
-state=StateVars()
+state  = StateVars()
 
 class Block:
 
@@ -138,25 +138,25 @@ class Block:
 
     def enter(self,transaction):
 
-        print("Time:{:12.2f}".format(state.clock),"|","Transaction Id {:6}".format(transaction.id),"|","Block No {:3}".format(self.blockno),"(",type(self).__name__,")")
+        print("Time:{:12.2f}".format(state.clock), "|", "Transaction Id {:6}".format(transaction.id), "|", "Block No {:3}".format(self.blockno), "(", type(self).__name__, ")")
         return 1
 
-    def enter_next_block(self,transaction):
+    def enter_next_block(self, transaction):
 
-        fevent = (state.clock,self.blockno,self.blockno+1,transaction)
-        heapq.heappush(state.FEL,fevent)
+        fevent = (state.clock, self.blockno,self.blockno+1, transaction)
+        heapq.heappush(state.FEL, fevent)
 
     def __repr__(self):
 
-        s = "[{}({}): {}]".format(type(self).__name__,self.blockno,self.transactions)
+        s = "[{}({}): {}]".format(type(self).__name__, self.blockno, self.transactions)
         return s
 
 class GenerateBlock(Block):
 
-    def __init__(self,type, lowest_interarrival=0,highest_interarrival=15, seed=100.99107 , mulp=42.4242, add=1001.1199):
+    def __init__(self, type, lowest_interarrival=0, highest_interarrival=15, seed=100.99107, mulp=42.4242, add=1001.1199):
 
         Block.__init__(self)
-        self.dist = dis.Distribution.factory(type,lowest_interarrival,highest_interarrival, seed , mulp, add);
+        self.dist = dis.Distribution.factory(type, lowest_interarrival, highest_interarrival, seed, mulp, add);
 
 
     def setup(self):
@@ -170,8 +170,8 @@ class GenerateBlock(Block):
         if state.debugging:
                 print("Transaction Generation Time:",inter_arrival)
 
-        fevent = (inter_arrival+state.clock,-1,self.blockno,Transaction())
-        heapq.heappush(state.FEL,fevent)
+        fevent = (inter_arrival+state.clock, -1, self.blockno, Transaction())
+        heapq.heappush(state.FEL, fevent)
 
     def enter(self,transaction):
 
@@ -192,30 +192,30 @@ class TerminateBlock(Block):
 
         #Debugging Setting
         if state.debugging:
-                print(transaction.id, "Terminated with value of", self.decrement)
+                print("Transaction", transaction.id, "Terminated with value of", self.decrement, "at Block No:", self.blockno)
 
         state.terminate_counter -= self.decrement
         self.transactions.clear()
 
 class TransferBlock(Block):
 
-    def __init__(self,probability,target_block):
+    def __init__(self,probability, target_block):
 
         Block.__init__(self)
         self.target_block = target_block
-        self.prob=dis.Probability(probability)
+        self.prob = dis.Probability(probability)
 
-    def enter(self,transaction):
+    def enter(self, transaction):
 
-        Block.enter(self,transaction)
+        Block.enter(self, transaction)
 
         if self.prob.roll():
             #Debugging Setting
             if state.debugging:
-                    print(transaction.id, "Passed")
+                    print("Transaction", transaction.id, "Passed Moving To Block", self.target_block)
 
-            fevent = (state.clock,self.blockno,self.target_block,transaction)
-            heapq.heappush(state.FEL,fevent)
+            fevent = (state.clock, self.blockno, self.target_block, transaction)
+            heapq.heappush(state.FEL, fevent)
 
         else:
             #Debugging Setting
@@ -225,54 +225,54 @@ class TransferBlock(Block):
 
 class AdvanceBlock(Block):
 
-    def __init__(self,type, lowest_interarrival=0,highest_interarrival=15, seed=100.99107 , mulp=42.4242, add=1001.1199):
+    def __init__(self, type, lowest_interarrival=0, highest_interarrival=15, seed=100.99107, mulp=42.4242, add=1001.1199):
 
         Block.__init__(self)
-        self.dist = dis.Distribution.factory(type,lowest_interarrival,highest_interarrival, seed , mulp, add);
+        self.dist = dis.Distribution.factory(type, lowest_interarrival, highest_interarrival, seed, mulp, add);
 
-    def enter(self,transaction):
+    def enter(self, transaction):
 
-        Block.enter(self,transaction)
+        Block.enter(self, transaction)
         advance = self.dist.bootstrap()
 
         #Debugging Setting
         if state.debugging:
-            print("Advance Time is:", advance, "Moving to Block: ",self.blockno+1);
+            print("Transaction:", transaction.id, "Moving to Block: ", self.blockno+1, "With Delay of", advance);
 
-        fevent = (state.clock+advance,self.blockno,self.blockno+1,transaction)
-        heapq.heappush(state.FEL,fevent)
+        fevent = (state.clock+advance, self.blockno, self.blockno+1, transaction)
+        heapq.heappush(state.FEL, fevent)
 
 class LinkBlock(Block):
 
-    def __init__(self,listname):
+    def __init__(self, listname):
 
         Block.__init__(self)
         self.listname = listname
-        state.userlists[listname]=UserList()
+        state.userlists[listname] = UserList()
 
     def setup(self):
 
         Block.setup(self)
         state.userlists[self.listname].waiting_transactions.clear()
 
-    def enter(self,transaction):
+    def enter(self, transaction):
 
-        Block.enter(self,transaction)
+        Block.enter(self, transaction)
 
         state.userlists[self.listname].waiting_transactions.append(transaction)
 
         #Debugging Setting
         if state.debugging:
-            print(transaction.id, "Is Attached to", self.listname);
+            print("Transaction", transaction.id, "Is Attached to", self.listname);
 
 class UnlinkBlock(object):
-    def factory(type,listname,target_block,alternative_block):
+    def factory(type, listname, target_block, alternative_block):
         if type == "FIFO":
-            Unlink = UnlinkBlockFIFO(listname,target_block,alternative_block)
+            Unlink = UnlinkBlockFIFO(listname, target_block, alternative_block)
             return Unlink
 
         if type == "LIFO":
-            Unlink = UnlinkBlockLIFO(listname,target_block,alternative_block)
+            Unlink = UnlinkBlockLIFO(listname, target_block, alternative_block)
             return Unlink
 
         assert 0, "Bad Distribution: " + type
@@ -280,16 +280,16 @@ class UnlinkBlock(object):
 
 class UnlinkBlockFIFO(Block):
 
-    def __init__(self,listname,target_block,alternative_block):
+    def __init__(self, listname, target_block, alternative_block):
 
         Block.__init__(self)
         self.listname = listname
         self.target_block = target_block
         self.alternative_block = alternative_block
 
-    def enter(self,transaction):
+    def enter(self, transaction):
 
-        Block.enter(self,transaction)
+        Block.enter(self, transaction)
 
         if len(state.userlists[self.listname].waiting_transactions)>0:
 
@@ -297,10 +297,10 @@ class UnlinkBlockFIFO(Block):
 
             #Debugging Setting
             if state.debugging:
-                print(transaction.id,"Unlinked the",unlinked_transaction.id,"From:",self.listname,"Moving to:",self.target_block);
+                print("Transaction", transaction.id, "Unlinked the Transaction", unlinked_transaction.id, "From:",self.listname, "Moving to Block:", self.target_block);
 
-            fevent = (state.clock,unlinked_transaction.current_block,self.target_block,unlinked_transaction)
-            heapq.heappush(state.FEL,fevent)
+            fevent = (state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
+            heapq.heappush(state.FEL, fevent)
 
             self.enter_next_block(transaction)
 
@@ -308,34 +308,34 @@ class UnlinkBlockFIFO(Block):
 
             #Debugging Setting
             if state.debugging:
-                print(transaction.id,"Could not unlink anything from the list moving to block:",self.alternative_block);
+                print(transaction.id, "Could not unlink anything from the list moving to block:", self.alternative_block);
 
-            fevent = (state.clock,self.blockno,self.alternative_block,transaction)
-            heapq.heappush(state.FEL,fevent)
+            fevent = (state.clock, self.blockno, self.alternative_block, transaction)
+            heapq.heappush(state.FEL, fevent)
 
 class UnlinkBlockLIFO(Block):
 
-    def __init__(self,listname,target_block,alternative_block):
+    def __init__(self, listname, target_block, alternative_block):
 
         Block.__init__(self)
         self.listname = listname
         self.target_block = target_block
         self.alternative_block = alternative_block
 
-    def enter(self,transaction):
+    def enter(self, transaction):
 
-        Block.enter(self,transaction)
+        Block.enter(self, transaction)
 
-        if len(state.userlists[self.listname].waiting_transactions)>0:
+        if len(state.userlists[self.listname].waiting_transactions) > 0:
 
             unlinked_transaction = state.userlists[self.listname].waiting_transactions.pop()
 
             #Debugging Setting
             if state.debugging:
-                print(transaction.id,"Unlinked the",unlinked_transaction.id,"From:",self.listname,"Moving to:",self.target_block);
+                print(transaction.id, "Unlinked the", unlinked_transaction.id, "From:", self.listname, "Moving to:", self.target_block);
 
-            fevent = (state.clock,unlinked_transaction.current_block,self.target_block,unlinked_transaction)
-            heapq.heappush(state.FEL,fevent)
+            fevent = (state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
+            heapq.heappush(state.FEL, fevent)
 
             self.enter_next_block(transaction)
 
@@ -343,7 +343,7 @@ class UnlinkBlockLIFO(Block):
 
             #Debugging Setting
             if state.debugging:
-                print(transaction.id,"Could not unlink anything from the list moving to block:",self.alternative_block);
+                print(transaction.id, "Could not unlink anything from the list moving to block:", self.alternative_block);
 
-            fevent = (state.clock,self.blockno,self.alternative_block,transaction)
-            heapq.heappush(state.FEL,fevent)
+            fevent = (state.clock, self.blockno, self.alternative_block, transaction)
+            heapq.heappush(state.FEL, fevent)

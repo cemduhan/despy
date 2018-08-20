@@ -4,15 +4,15 @@ import collections
 import math
 
 class Distribution(object):
-    def factory(type,lowest_interarrival,highest_interarrival, seed , mulp, add):
+    def factory(type, lowest_interarrival, highest_interarrival, seed, mulp, add):
         if type == "Uniform":
             Dist = UniformDistribution()
-            Dist.SetVariables(lowest_interarrival,highest_interarrival, seed , mulp, add)
+            Dist.SetVariables(lowest_interarrival,highest_interarrival, seed, mulp, add)
             return Dist
 
         if type == "Exponential":
             Dist = ExponentialDistribution()
-            Dist.SetVariables(lowest_interarrival,highest_interarrival, seed)
+            Dist.SetVariables(lowest_interarrival, highest_interarrival, seed)
             return Dist
 
         assert 0, "Bad Distribution: " + type
@@ -22,15 +22,15 @@ class UniformDistribution(Distribution):
 
     def __init__(self):
 
-        self.lowest_interarrival=0
-        self.highest_interarrival=15
+        self.lowest_interarrival = 0
+        self.highest_interarrival = 15
         self.seed = 100.99107
         self.mulp = 42.4242
         self.add = 1001.1199
 
-    def SetVariables(self, lowest_interarrival=0,highest_interarrival=15, seed=100.99107 , mulp=42.4242, add=1001.1199 ):
-        self.lowest_interarrival=lowest_interarrival
-        self.highest_interarrival=highest_interarrival
+    def SetVariables(self, lowest_interarrival=0, highest_interarrival=15, seed=100.99107, mulp=42.4242, add=1001.1199):
+        self.lowest_interarrival = lowest_interarrival
+        self.highest_interarrival = highest_interarrival
         self.seed = seed
         self.mulp = mulp
         self.add = add
@@ -51,14 +51,14 @@ class UniformDistribution(Distribution):
 class ExponentialDistribution(Distribution):
 
     def __init__(self):
-        self.lowest_interarrival=0
-        self.highest_interarrival=15
-        self.lambda_parameter=1.3
+        self.lowest_interarrival = 0
+        self.highest_interarrival = 15
+        self.lambda_parameter = 1.3
 
-    def SetVariables(self,lowest_interarrival=0,highest_interarrival=15, lambda_parameter=1.3):
-        self.lowest_interarrival=lowest_interarrival
-        self.highest_interarrival=highest_interarrival
-        self.lambda_parameter=lambda_parameter
+    def SetVariables(self, lowest_interarrival=0, highest_interarrival=15, lambda_parameter=1.3):
+        self.lowest_interarrival = lowest_interarrival
+        self.highest_interarrival = highest_interarrival
+        self.lambda_parameter = lambda_parameter
 
     def bootstrap(self):
         r = random.random()
@@ -71,7 +71,7 @@ class Probability():
 
     def __init__(self, probability=0.5):
 
-        self.chance=probability
+        self.chance = probability
 
     def SetSeed(self, seed=76845326783425):#not recommended but avalible
         random.seed(seed)
