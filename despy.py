@@ -14,7 +14,7 @@ def simulate():
     cntr = 0
 
     #main simulation loop - grab next event off future event list and process
-    while len(state.FEL) > 0 and state.terminate_counter > 0:
+    while len(state.DEL) > 0 or len(state.FEL) > 0 and state.terminate_counter > 0:
 
 
 
@@ -83,8 +83,11 @@ class StateVars:
         self.debugging = False
         self.terminate_counter = None # set this yourself or be sorry later
         self.FEL=[] # future event list
-        #self.delay_list = []
-        self.userlists= {}
+        self.DEL = []
+        self.userlists = {}
+        self.enterlists = {}
+        self.enterptrs = {}
+        self.enterlists_sizes = {}
         self.blocks = []
         self.genid = idgen()
         self.genblockid = idgen()
@@ -102,7 +105,9 @@ class StateVars:
         s += "   clock: {0:.4f}\n".format(self.clock)
         s += "   termn: {0: 6}\n".format(self.terminate_counter)
         s += "     FEL: {0}\n".format(str(self.FEL))
+        s += "     DEL: {0}\n".format(str(self.DEL))
         s += "  ulists: {0}\n".format(str(self.userlists))
+        s += "  dlists: {0}\n".format(str(self.enterlists))
         #s += "  queues: {0}\n".format(str(self.queues))
         s += "  blocks:\n"
         for i,block in enumerate(self.blocks):
@@ -153,10 +158,10 @@ class Block:
 
 class GenerateBlock(Block):
 
-    def __init__(self, type, lowest_interarrival=0, highest_interarrival=15, seed=100.99107, mulp=42.4242, add=1001.1199):
+    def __init__(self, type, lowest_interarrival = 0, highest_interarrival = 15, seed = 100.99107, mulp = 42.4242, add = 1001.1199):
 
         Block.__init__(self)
-        self.dist = dis.Distribution.factory(type, lowest_interarrival, highest_interarrival, seed, mulp, add);
+        self.dist = dis.Distribution.factory(type, lowest_interarrival, highest_interarrival, seed, mulp, add)
 
 
     def setup(self):
@@ -173,9 +178,9 @@ class GenerateBlock(Block):
         fevent = (inter_arrival+state.clock, -1, self.blockno, Transaction())
         heapq.heappush(state.FEL, fevent)
 
-    def enter(self,transaction):
+    def enter(self, transaction):
 
-        Block.enter(self,transaction)
+        Block.enter(self, transaction)
         self.bootstrap()
         self.enter_next_block(transaction)
 
@@ -188,7 +193,7 @@ class TerminateBlock(Block):
 
     def enter(self,transaction):
 
-        Block.enter(self,transaction)
+        Block.enter(self, transaction)
 
         #Debugging Setting
         if state.debugging:
@@ -347,3 +352,62 @@ class UnlinkBlockLIFO(Block):
 
             fevent = (state.clock, self.blockno, self.alternative_block, transaction)
             heapq.heappush(state.FEL, fevent)
+
+class EnterBlock(Block):
+
+    def __init__(self, listname, Qsize):
+
+        Block.__init__(self)
+        self.listname = listname
+        self.Qsize = Qsize
+        state.enterlists[listname] = UserList()
+        state.enterlists_sizes[listname] = 0
+
+    def enter(self, transaction):
+
+        if state.enterlists_sizes[self.listname] < self.Qsize:
+
+            Block.enter(self, transaction)
+            state.enterlists_sizes[self.listname] += 1
+            #Debugging Setting
+            if state.debugging:
+                print("Transaction:", transaction.id, "Entered", self.listname, "at", state.clock, "Capacity Left Is ", self.Qsize - state.enterlists_sizes[self.listname])
+
+            fevent = (state.clock, self.blockno, self.blockno+1, transaction)
+            heapq.heappush(state.FEL, fevent)
+
+        else:
+
+            devent = (state.clock, self.blockno, self.blockno, transaction)
+            state.enterlists[self.listname].waiting_transactions.append(devent)
+            #Debugging Setting
+            if state.debugging:
+                print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname)
+
+    def check_DEL(self):
+
+        if len(state.userlists[self.listname]) > 0 and state.enterlists_sizes[self.listname] < self.Qsize:
+            devent = state.enterlists[self.listname].waiting_transactions.pop()
+            #Debugging Setting
+            if state.debugging:
+                print("Transaction:", devent.transaction.id, "Removed from", self.listname, "waiting list at", state.clock, "trying to enter", self.listname)
+            self.enter(self, devent)
+
+class LeaveBlock(Block):
+
+    def __init__(self, listname):
+
+        Block.__init__(self)
+        self.listname = listname
+
+    def enter(self, transaction):
+
+        Block.enter(self, transaction)
+        state.enterlists_sizes[self.listname] -= 1
+        #Debugging Setting
+        if state.debugging:
+            print("Transaction:", transaction.id, "Left", self.listname);
+
+        fevent = (state.clock, self.blockno, self.blockno+1, transaction)
+        heapq.heappush(state.FEL, fevent)
+

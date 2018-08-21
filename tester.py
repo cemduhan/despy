@@ -3,7 +3,7 @@ from matplotlib import pyplot
 from matplotlib.pyplot import hist,title,xlabel,ylabel,xlim,ylim
 
 
-def test_model():
+def test_model_1():
 
     DES.state.clear()
     DES.state.debugging=True
@@ -19,11 +19,22 @@ def test_model():
 
     DES.state.terminate_counter = 10
 
+def test_model_2():
+
+    DES.state.clear()
+    DES.state.debugging=True
+    DES.state.add_block(DES.GenerateBlock('Uniform',5, 5, 1.2))#0
+    DES.state.add_block(DES.EnterBlock("Depot", 2))#1
+    DES.state.add_block(DES.AdvanceBlock('Uniform',10,10))#2
+    DES.state.add_block(DES.LeaveBlock("Depot"))#3
+    DES.state.add_block(DES.TerminateBlock(1))#4
+
+    DES.state.terminate_counter = 10
 
 def experiment():
 
     seed = 987654321;
-    test_model()
+    test_model_2()
     DES.random.seed(seed)
 
     DES.simulate()
