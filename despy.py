@@ -361,7 +361,9 @@ class EnterBlock(Block):
         self.listname = listname
         self.Qsize = Qsize
         state.enterlists[listname] = UserList()
+        state.enterptrs[listname] = UserList()
         state.enterlists_sizes[listname] = 0
+        state.enterptrs[listname].waiting_transactions.append(self)
 
     def enter(self, transaction):
 
@@ -386,12 +388,14 @@ class EnterBlock(Block):
 
     def check_DEL(self):
 
-        if len(state.userlists[self.listname]) > 0 and state.enterlists_sizes[self.listname] < self.Qsize:
+        if len(state.enterlists[self.listname].waiting_transactions) > 0 and state.enterlists_sizes[self.listname] < self.Qsize:
             devent = state.enterlists[self.listname].waiting_transactions.pop()
+            transaction = devent[3]
+            transaction.current_block = self.blockno;
             #Debugging Setting
             if state.debugging:
-                print("Transaction:", devent.transaction.id, "Removed from", self.listname, "waiting list at", state.clock, "trying to enter", self.listname)
-            self.enter(self, devent)
+                print("Transaction:", transaction, "Removed from", self.listname, "waiting list at", state.clock, "trying to enter", self.listname)
+            self.enter(transaction)
 
 class LeaveBlock(Block):
 
@@ -411,3 +415,4 @@ class LeaveBlock(Block):
         fevent = (state.clock, self.blockno, self.blockno+1, transaction)
         heapq.heappush(state.FEL, fevent)
 
+        state.enterptrs[self.listname].waiting_transactions[0].check_DEL()
