@@ -163,11 +163,10 @@ class GenerateBlock(Block):
         Block.__init__(self)
         self.dist = dis.Distribution.factory(type, lowest_interarrival, highest_interarrival, seed, mulp, add)
         self.type = type
-        if (self.type == 'NoDelay') and (self.limit > 0):
+        if (self.type == 'NoDelay') and (lowest_interarrival > 0):
             self.limit = math.floor(lowest_interarrival)
-        elif (self.type == 'NoDelay') and (self.limit <= 0):
-            assert 0, "Bad Limit Value:  " + str(math.floor(lowest_interarrival)) + "Should be greater than 0"
-
+        elif (self.type == 'NoDelay') and (lowest_interarrival <= 0):
+            assert 0, "Bad Limit Value: " + str(math.floor(lowest_interarrival)) + " Should be greater than 0"
 
     def setup(self):
         Block.setup(self)
@@ -175,7 +174,7 @@ class GenerateBlock(Block):
 
     def bootstrap(self):
 
-        if (self.type == 'NoDelay') and (self.limit <= 0):
+        if (self.type == 'NoDelay'):
             self.limit -= 1
 
         inter_arrival = self.dist.bootstrap()
@@ -189,7 +188,6 @@ class GenerateBlock(Block):
     def enter(self, transaction):
 
         Block.enter(self, transaction)
-
         if (self.type == 'NoDelay') and (self.limit <= 0):
             self.enter_next_block(transaction)
             return
@@ -203,6 +201,8 @@ class TerminateBlock(Block):
 
         Block.__init__(self)
         self.decrement = decrement
+        if self.decrement < 0:
+            assert 0, "Bad Decrement Value: " + str(self.decrement) + "Should be between greater than 0"
 
     def enter(self,transaction):
 
@@ -377,6 +377,9 @@ class EnterBlock(Block):
         state.enterptrs[listname] = UserList()
         state.enterlists_sizes[listname] = 0
         state.enterptrs[listname].waiting_transactions.append(self)
+
+        if (self.Qsize <= 0):
+            assert 0, "Bad Que Size Value: " + str(self.Qsize) + " Should be greater than 0"
 
     def enter(self, transaction):
 

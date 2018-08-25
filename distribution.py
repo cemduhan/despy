@@ -38,19 +38,19 @@ class UniformDistribution(Distribution):
 
     def CheckValues(self):
         if self.lowest_interarrival < 0:
-            assert 0, "Bad Lowest Interarrival Value: " + self.lowest_interarrival + "Should be between greater than 0"
+            assert 0, "Bad Lowest Interarrival Value: " + str(self.lowest_interarrival) + "Should be between greater than 0"
 
         if self.highest_interarrival < 0 or self.highest_interarrival < self.lowest_interarrival:
-            assert 0, "Bad Highest Interarrival Value: " + self.lowest_interarrival + "Should be between greater than 0 and Lowest Interarrival"
+            assert 0, "Bad Highest Interarrival Value: " + str(self.lowest_interarrival) + "Should be between greater than 0 and Lowest Interarrival"
 
         if self.seed < 0:
-            assert 0, "Bad Seed Value: " + self.seed + "Should be between greater than 0"
+            assert 0, "Bad Seed Value: " + str(self.seed) + "Should be between greater than 0"
 
         if self.mulp < 0:
-            assert 0, "Bad M Value: " + self.mulp + "Should be between greater than 0"
+            assert 0, "Bad M Value: " + str(self.mulp) + "Should be between greater than 0"
 
         if self.add < 0:
-            assert 0, "Bad Addative Value: " + self.add + "Should be between greater than 0"
+            assert 0, "Bad Addative Value: " + str(self.add) + "Should be between greater than 0"
 
     def SetVariables(self, lowest_interarrival=0, highest_interarrival=15, seed=100.99107, mulp=42.4242, add=1001.1199):
         self.lowest_interarrival = lowest_interarrival
@@ -81,13 +81,13 @@ class ExponentialDistribution(Distribution):
 
     def CheckValues(self):
         if self.lowest_interarrival < 0:
-            assert 0, "Bad Lowest Interarrival Value: " + self.lowest_interarrival + "Should be between greater than 0"
+            assert 0, "Bad Lowest Interarrival Value: " + str(self.lowest_interarrival) + "Should be between greater than 0"
 
         if self.highest_interarrival < 0 or self.highest_interarrival < self.lowest_interarrival:
-            assert 0, "Bad Highest Interarrival Value: " + self.lowest_interarrival + "Should be between bigger than 0 and Lowest Interarrival"
+            assert 0, "Bad Highest Interarrival Value: " + str(self.lowest_interarrival) + "Should be between bigger than 0 and Lowest Interarrival"
 
         if self.lambda_parameter < 0:
-            assert 0, "Bad Lambda Value: " + self.lambda_parameter + "Should be between greater than 0"
+            assert 0, "Bad Lambda Value: " + str(self.lambda_parameter) + "Should be between greater than 0"
 
     def SetVariables(self, lowest_interarrival=0, highest_interarrival=15, lambda_parameter=1.3):
         self.lowest_interarrival = lowest_interarrival
@@ -135,10 +135,14 @@ class EmpiricalDistribution(Distribution):
             return inter_arrival
 
     def setupDisturbution(self):
-        with open(self.filename) as file:
-            self.content = file.readlines()
-        self.content = [x.strip() for x in self.content]
-        self.lenght = len(self.content)
+        try:
+            with open(self.filename) as file:
+                self.content = file.readlines()
+            self.content = [x.strip() for x in self.content]
+            self.lenght = len(self.content)
+        except (RuntimeError, TypeError, NameError):
+            print("No such file or directory:" + self.filename)
+
 
 class NoDelayDistribution(Distribution):
 
@@ -157,7 +161,7 @@ class Probability():
 
     def CheckValues(self):
         if self.chance > 1 or self.chance < 0:
-            assert 0, "Bad Probability Value: " + self.chance* 100 + "Should be between 0 and 100"
+            assert 0, "Bad Probability Value: " + str(self.chance* 100) + "Should be between 0 and 100"
 
     def SetSeed(self, seed=76845326783425):#not recommended but avalible
         random.seed(seed)
