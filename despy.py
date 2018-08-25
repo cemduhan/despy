@@ -163,8 +163,10 @@ class GenerateBlock(Block):
         Block.__init__(self)
         self.dist = dis.Distribution.factory(type, lowest_interarrival, highest_interarrival, seed, mulp, add)
         self.type = type
-        if (self.type == 'NoDelay') and (self.limit <= 0):
+        if (self.type == 'NoDelay') and (self.limit > 0):
             self.limit = math.floor(lowest_interarrival)
+        elif (self.type == 'NoDelay') and (self.limit <= 0):
+            assert 0, "Bad Limit Value:  " + str(math.floor(lowest_interarrival)) + "Should be greater than 0"
 
 
     def setup(self):
@@ -219,7 +221,7 @@ class TransferBlock(Block):
 
         Block.__init__(self)
         self.target_block = target_block
-        self.prob = dis.Probability(probability)
+        self.prob = dis.Probability(probability/100)
 
     def enter(self, transaction):
 
@@ -237,7 +239,7 @@ class TransferBlock(Block):
             #Debugging Setting
             if state.debugging:
                     print(transaction.id, "Failed to pass so")
-            self.enter_next_block()
+            self.enter_next_block(transaction)
 
 class AdvanceBlock(Block):
 
