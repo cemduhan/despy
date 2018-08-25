@@ -58,6 +58,7 @@ class UniformDistribution(Distribution):
         self.seed = seed
         self.mulp = mulp
         self.add = add
+        self.CheckValues()
 
     def bootstrap(self):
         #basic linear congruential generator
@@ -168,6 +169,7 @@ class Probability():
 
     def SetChance(self, probability=0.5):
         self.probability=probability
+        self.CheckValues()
 
 
     def roll(self):
