@@ -31,11 +31,37 @@ def test_model_2():
 
     DES.state.terminate_counter = 10
 
+def test_model_3():
+
+    DES.state.clear()
+    DES.state.debugging=True
+    DES.state.add_block(DES.GenerateBlock('Empirical', "distru.txt", False))#0
+    DES.state.add_block(DES.TerminateBlock(1))#4
+
+    DES.state.terminate_counter = 1
+
+def test_model_4():
+
+    DES.state.clear()
+    DES.state.debugging=True
+    DES.state.add_block(DES.GenerateBlock('Uniform',5.5, 12.3, 1.5))#0
+    DES.state.add_block(DES.TerminateBlock(1))#4
+
+    DES.state.terminate_counter = 1
+
+def test_model_5():
+
+    DES.state.clear()
+    DES.state.debugging=True
+    DES.state.add_block(DES.GenerateBlock('NoDelay',5))#0
+    DES.state.add_block(DES.TerminateBlock(1))#4
+
+    DES.state.terminate_counter = 5
+
 def experiment():
 
     seed = 987654321;
-    test_model_2()
-    DES.random.seed(seed)
+    test_model_1()
 
     DES.simulate()
 

@@ -15,6 +15,15 @@ class Distribution(object):
             Dist.SetVariables(lowest_interarrival, highest_interarrival, seed)
             return Dist
 
+        if type == "Empirical":
+            Dist = EmpiricalDistribution()
+            Dist.SetVariables(lowest_interarrival)
+            return Dist
+
+        if type == "NoDelay":
+            Dist = NoDelayDistribution()
+            return Dist
+
         assert 0, "Bad Distribution: " + type
     factory = staticmethod(factory)
 
@@ -66,6 +75,45 @@ class ExponentialDistribution(Distribution):
         #inter_arrival = inter_arrival + self.lowest_interarrival;
         self.lambda_parameter=inter_arrival;
         return inter_arrival
+
+class EmpiricalDistribution(Distribution):
+
+    def __init__(self):
+        self.filename = None
+        self.interpolation = False
+
+    def SetVariables(self, filename=None, interpolation=False):
+        self.filename = filename
+        self.interpolation = interpolation
+        self.setupDisturbution()
+
+    def bootstrap(self):
+
+        roll = self.lenght * random.random()
+        floor = int(math.floor(roll))
+        roof = floor + 1;
+
+        if self.interpolation:
+            inter_arrival = float(self.content[roof] * self.content[floor]) * (roll - floor)
+            return inter_arrival
+        else:
+            inter_arrival = float(self.content[floor])
+            return inter_arrival
+
+    def setupDisturbution(self):
+        with open(self.filename) as file:
+            self.content = file.readlines()
+        self.content = [x.strip() for x in self.content]
+        self.lenght = len(self.content)
+
+class NoDelayDistribution(Distribution):
+
+    def __init__(self):
+        self.delay = None
+
+    def bootstrap(self):
+
+        return 0.0
 
 class Probability():
 
