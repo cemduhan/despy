@@ -68,14 +68,14 @@ def NoDelayGenerate_Test_With_Invalid_Limit():
 def EnterBlockTest_Valid_Que_Size():
     print("EnterBlockTest_Valid_Que_Size")
     DES.state.clear()
-    DES.state.debugging=False
+    DES.state.debugging=True
     DES.state.add_block(DES.GenerateBlock('Uniform',2, 2, 1.2))#0
     DES.state.add_block(DES.EnterBlock("Depot", 2))#1
-    DES.state.add_block(DES.AdvanceBlock('Uniform',10,10))#2
+    DES.state.add_block(DES.AdvanceBlock('Uniform',5,5))#2
     DES.state.add_block(DES.LeaveBlock("Depot"))#3
     DES.state.add_block(DES.TerminateBlock(1))#4
 
-    DES.state.terminate_counter = 10
+    DES.state.terminate_counter = 3
 
 def EnterBlockTest_Invnalid_Que_Size():
     print("EnterBlockTest_Invnalid_Que_Size")
@@ -116,7 +116,7 @@ def experiment():
     seed = 987654321
     DES.random.seed(seed)
 
-    TerminateBlock_Test_With_Valid_Limit()
+    EnterBlockTest_Valid_Que_Size()
 
     DES.simulate()
 

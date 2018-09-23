@@ -14,7 +14,7 @@ def simulate():
     cntr = 0
 
     #main simulation loop - grab next event off future event list and process
-    while len(state.DEL) > 0 or len(state.FEL) > 0 and state.terminate_counter > 0:
+    while (len(state.DEL) > 0 or len(state.FEL) > 0) and state.terminate_counter > 0:
 
 
 
@@ -38,8 +38,22 @@ def simulate():
         transaction.current_block = target_block
 
         cntr += 1
+        if len(state.DEL) > 0:
+            for event in state.DEL:
 
+                devent = heapq.heappop(state.DEL)
+
+                #state.clock=devent[0]
+                source_block = devent[1]
+                target_block = devent[2]
+                transaction = devent[3]
+
+                state.blocks[target_block].enter(transaction)
+                state.blocks[target_block].transactions.add(transaction)
+                transaction.current_block = target_block
     print("--------------------------------------------------------------------------")
+    print("Simulation Finished")
+    print(state)
 
 class Transaction:
 
@@ -83,7 +97,7 @@ class StateVars:
         self.debugging = False
         self.terminate_counter = None # set this yourself or be sorry later
         self.FEL=[] # future event list
-        self.DEL = []
+        self.DEL = [] # delayed event list
         self.userlists = {}
         self.enterlists = {}
         self.enterptrs = {}
@@ -396,22 +410,11 @@ class EnterBlock(Block):
 
         else:
 
-            devent = (state.clock, self.blockno, self.blockno, transaction)
-            state.enterlists[self.listname].waiting_transactions.append(devent)
+            devent = (state.clock, self.blockno-1, self.blockno, transaction)
+            state.DEL.append(devent)
             #Debugging Setting
             if state.debugging:
                 print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname)
-
-    def check_DEL(self):
-
-        if len(state.enterlists[self.listname].waiting_transactions) > 0 and state.enterlists_sizes[self.listname] < self.Qsize:
-            devent = state.enterlists[self.listname].waiting_transactions.pop()
-            transaction = devent[3]
-            transaction.current_block = self.blockno
-            #Debugging Setting
-            if state.debugging:
-                print("Transaction:", transaction, "Removed from", self.listname, "waiting list at", state.clock, "trying to enter", self.listname)
-            self.enter(transaction)
 
 class LeaveBlock(Block):
 
@@ -430,5 +433,3 @@ class LeaveBlock(Block):
 
         fevent = (state.clock, self.blockno, self.blockno+1, transaction)
         heapq.heappush(state.FEL, fevent)
-
-        state.enterptrs[self.listname].waiting_transactions[0].check_DEL()
