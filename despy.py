@@ -108,10 +108,7 @@ class StateVars:
         s += "     FEL: {0}\n".format(str(self.FEL))
         s += "     DEL: {0}\n".format(str(self.DEL))
         s += "  ulists: {0}\n".format(str(self.userlists))
-        # s += "  queues: {0}\n".format(str(self.queues))
-        s += "  storages:\n"
-        for k, storage in enumerate(self.listdictionary):
-            s += "        {0: 3}: {1}\n".format(k, storage)
+        s += "  storages:{0}\n".format(self.listdictionary)
         s += "  blocks:\n"
         for i, block in enumerate(self.blocks):
             s += "        {0: 3}: {1}\n".format(i, block)
@@ -439,7 +436,7 @@ class LeaveBlock(Block):
 class Storage():
 
     def __repr__(self):
-        s = "[{}({}): {}]".format(type(self).__name__, self.limit, self.left)
+        s = "[Limit:{} : Left:{}]".format(self.limit, self.left)
         return s
 
     def __init__(self, listname, storage):
