@@ -101,11 +101,6 @@ class StateVars:
         self.genid = idgen()
         self.genblockid = idgen()
 
-    def add_block(self, block):
-        ind = len(self.blocks)
-        assert (ind == block.blockno)
-        self.blocks.append(block)
-
     def __repr__(self):
         s = "\nStateVars:\n"
         s += "   clock: {0:.4f}\n".format(self.clock)
@@ -114,12 +109,15 @@ class StateVars:
         s += "     DEL: {0}\n".format(str(self.DEL))
         s += "  ulists: {0}\n".format(str(self.userlists))
         # s += "  queues: {0}\n".format(str(self.queues))
+        s += "  storages:\n"
+        for k, storage in enumerate(self.listdictionary):
+            s += "        {0: 3}: {1}\n".format(k, storage)
         s += "  blocks:\n"
         for i, block in enumerate(self.blocks):
             s += "        {0: 3}: {1}\n".format(i, block)
-        return s
         s += "  termn:" + str(self.terminate_counter) + "\n"
         s += "  clock:" + str(self.clock) + "\n"
+        return s
 
 
 # just a utility generator to return IDs in order
@@ -139,6 +137,10 @@ class Block:
     def __init__(self):
         self.blockno = next(state.genblockid)
         self.transactions = set()
+
+        ind = len(state.blocks)
+        assert (ind == self.blockno)
+        state.blocks.append(self)
 
     def setup(self):
         for transaction in self.transactions:
@@ -383,34 +385,24 @@ class UnlinkBlockLIFO(Block):
 
 class EnterBlock(Block):
 
-    def __init__(self, listname, Qsize):
-
-        Block.__init__(self)
-        self.Qsize = Qsize
-        if self.Qsize <= 0:
-            assert 0, "Bad Que Size Value: " + str(self.Qsize) + " Should be greater than 0"
+    def __init__(self, listname, limit):
+        self.limit = limit
         self.listname = listname
-
-        self.sizeleft = Qsize
-        state.listdictionary[self.listname] = self
-
-    def tx_left(self):
-        self.sizeleft = self.sizeleft + 1
-        if self.sizeleft > self.Qsize:
-            self.sizeleft = self.Qsize
+        Block.__init__(self)
+        if self.limit <= 0:
+            assert 0, "Bad Que Size Value: " + str(self.limit) + " Should be greater than 0"
 
     def enter(self, transaction):
 
-        if 0 < self.sizeleft:
+        if state.listdictionary[self.listname].enter(self.limit):
 
-            self.sizeleft = self.sizeleft - 1
             Block.enter(self, transaction)
             # Debugging Setting
             if state.debugging:
                 print("Transaction:", transaction.id,
                       "Entered", self.listname,
                       "at", state.clock,
-                      "Capacity Left Is ", self.sizeleft)
+                      "Capacity Left Is ", state.listdictionary[self.listname].size_left())
 
             fevent = (state.clock, self.blockno, self.blockno + 1, transaction)
             heapq.heappush(state.FEL, fevent)
@@ -426,8 +418,11 @@ class EnterBlock(Block):
 
 class LeaveBlock(Block):
 
-    def __init__(self, listname):
+    def __init__(self, listname, limit=0):
+        self.limit = limit
         Block.__init__(self)
+        if self.limit < 0:
+            assert 0, "Bad Limit Value: " + str(self.limit) + " Should be greater than 0"
         self.listname = listname
 
     def enter(self, transaction):
@@ -438,4 +433,49 @@ class LeaveBlock(Block):
 
         fevent = (state.clock, self.blockno, self.blockno + 1, transaction)
         heapq.heappush(state.FEL, fevent)
-        state.listdictionary[self.listname].tx_left()
+        state.listdictionary[self.listname].leave(self.limit)
+
+
+class Storage():
+
+    def __repr__(self):
+        s = "[{}({}): {}]".format(type(self).__name__, self.limit, self.left)
+        return s
+
+    def __init__(self, listname, storage):
+        self.listname = listname
+        self.left = storage
+        self.limit = storage
+        state.listdictionary[self.listname] = self
+
+    def size_left(self):
+        return self.left
+
+    def dec_limit(self, storage):
+        self.left = self.left - storage
+
+        if self.left < 0:
+            self.left = 0
+
+    def inc_limit(self, storage):
+        self.left = self.left + storage
+
+        if self.left > self.limit:
+            self.left = 0
+
+    def enter(self, storage):
+        if self.check_availability(storage):
+            self.dec_limit(storage)
+            return True
+        else:
+            return False
+
+    def check_availability(self, storage):
+        if self.left >= storage:
+            return True
+        else:
+            return False
+
+    def leave(self, storage):
+        self.inc_limit(storage)
+        return True
