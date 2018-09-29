@@ -5,7 +5,7 @@ from matplotlib.pyplot import hist, title, xlabel, ylabel, xlim, ylim
 
 def gasstation():
     des.state.clear()
-    des.state.debugging = True
+    des.state.debugging = False
 
     des.Storage("GasStation", 1)
     des.Storage("Cashier", 1)
