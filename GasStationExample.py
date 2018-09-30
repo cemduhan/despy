@@ -1,16 +1,14 @@
 import despy as des
-from matplotlib import pyplot
-from matplotlib.pyplot import hist, title, xlabel, ylabel, xlim, ylim
 
 
 def gasstation():
-    des.state.clear()
-    des.state.debugging = False
+    des.simulation.clear()
+    des.simulation.debug(False)
 
     des.Storage("GasStation", 5)  # Set Pump count to 5
     des.Storage("Cashier", 2)  # Set Cashier count to 2
 
-    des.GenerateBlock("Uniform", 1, 5, 1.5)  # 0 Cars arrive between 5.5 and 12.3 seconds
+    des.GenerateBlock("Uniform", 5, 12.3, 1.5)  # 0 Cars arrive between 5.5 and 12.3 seconds
 
     des.EnterBlock("GasStation", 1)  # 1 Cars Enter gas station which has 5 gas pumps so sixth car must wait
 
@@ -23,7 +21,7 @@ def gasstation():
     des.LeaveBlock("GasStation", 1)  # 6 After all owner leaves the station
     des.TerminateBlock(1)  # 7 Car destroyed
 
-    des.state.terminate_counter = 7
+    des.simulation.set_terminate(7)
 
     des.simulate()
 

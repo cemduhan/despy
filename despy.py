@@ -1,64 +1,63 @@
 # Author: Cem Karagöz - 150130066
-import random
 import heapq
-import collections
 import math
 from collections import deque
 import distribution as dis
 
 
 def simulate():
-    for block in state.blocks:
+    for block in simulation.blocks:
         block.setup()
 
     counter = 0
 
     # main simulation loop - grab next event off future event list and process
-    while (len(state.DEL) > 0 or len(state.FEL) > 0) and state.terminate_counter > 0:
+    while (len(simulation.state.DEL) > 0 or len(simulation.state.FEL) > 0) and simulation.state.terminate_counter > 0:
 
         print("--------------------------------------------------------------------------")
         # Debugging Setting
-        if state.debugging:
-            print("STATE:\n", state)
+        if simulation.debugging:
+            print("simulation.state:\n", simulation.state)
 
         print("Normal Events")
-        current_event = heapq.heappop(state.FEL)
+        current_event = heapq.heappop(simulation.state.FEL)
 
-        state.clock = current_event[0]
+        simulation.state.clock = current_event[0]
 
         source_block = current_event[1]
         target_block = current_event[2]
         transaction = current_event[3]
 
         if source_block != -1:
-            state.blocks[source_block].transactions.remove(transaction)
-        state.blocks[target_block].enter(transaction)
-        state.blocks[target_block].transactions.add(transaction)
+            simulation.blocks[source_block].transactions.remove(transaction)
+        simulation.blocks[target_block].enter(transaction)
+        simulation.blocks[target_block].transactions.add(transaction)
         transaction.current_block = target_block
 
         counter += 1
-        if len(state.DEL) > 0:
+        if len(simulation.state.DEL) > 0:
             print("DelayList Events")
-            for event in state.DEL:
-                delayed_event = heapq.heappop(state.DEL)
+            for event in simulation.state.DEL:
+                delayed_event = heapq.heappop(simulation.state.DEL)
 
                 source_block = delayed_event[1]
                 target_block = delayed_event[2]
                 transaction = delayed_event[3]
 
-                state.blocks[target_block].enter(transaction)
-                state.blocks[target_block].transactions.add(transaction)
+                simulation.blocks[target_block].enter(transaction)
+                simulation.blocks[target_block].transactions.add(transaction)
                 transaction.current_block = target_block
     print("--------------------------------------------------------------------------")
     print("Simulation Finished")
-    print(state)
+    print(simulation)
+    print(simulation.state)
 
 
 class Transaction:
 
     def __init__(self):
 
-        self.id = next(state.genid)
+        self.id = next(simulation.genid)
         self.current_block = -1
 
     def __repr__(self):
@@ -84,22 +83,58 @@ class UserList:
         return s
 
 
-class StateVars:
+class Despy:
 
     def __init__(self):
-        self.clear()
-
-    def clear(self):
-        self.clock = 0.0
+        self.state = StateVars()
         self.debugging = False
-        self.terminate_counter = None  # set this yourself or be sorry later
-        self.FEL = []  # future event list
-        self.DEL = []  # delayed event list
         self.userlists = {}
         self.listdictionary = {}
         self.blocks = []
         self.genid = idgen()
         self.genblockid = idgen()
+        self.state.clear()
+
+    def clear(self):
+        self.__init__()
+        self.state.clear()
+
+    def set_terminate(self, count):
+        if count <= 0:
+            assert 0, "Please enter a terminate counter that is greater than 0"
+        else:
+            self.state.terminate_counter = count
+
+    def debug(self, value):
+        if type(value) != bool:
+            assert 0, "Please a bool type value for debug"
+        else:
+            self.debugging=value
+
+    def __repr__(self):
+        s = "\nSimulation:\n"
+        s += "  ulists: {0}\n".format(str(self.userlists))
+        s += "  storages:{0}\n".format(self.listdictionary)
+        s += "  blocks:\n"
+        for i, block in enumerate(self.blocks):
+            s += "        {0: 3}: {1}\n".format(i, block)
+        return s
+
+
+class StateVars:
+
+    def __init__(self):
+        self.clock = 0.0
+        self.terminate_counter = None  # set this yourself or be sorry later
+        self.FEL = []  # future event list
+        self.DEL = []
+        self.clear()
+
+    def clear(self):
+        self.clock = 0.0
+        self.terminate_counter = None  # set this yourself or be sorry later
+        self.FEL = []  # future event list
+        self.DEL = []  # delayed event list
 
     def __repr__(self):
         s = "\nStateVars:\n"
@@ -107,13 +142,6 @@ class StateVars:
         s += "   termn: {0: 6}\n".format(self.terminate_counter)
         s += "     FEL: {0}\n".format(str(self.FEL))
         s += "     DEL: {0}\n".format(str(self.DEL))
-        s += "  ulists: {0}\n".format(str(self.userlists))
-        s += "  storages:{0}\n".format(self.listdictionary)
-        s += "  blocks:\n"
-        for i, block in enumerate(self.blocks):
-            s += "        {0: 3}: {1}\n".format(i, block)
-        s += "  termn:" + str(self.terminate_counter) + "\n"
-        s += "  clock:" + str(self.clock) + "\n"
         return s
 
 
@@ -126,18 +154,18 @@ def idgen():
 
 
 # this is a global object and we never replace it, just clear it
-state = StateVars()
+simulation = Despy()
 
 
 class Block:
 
     def __init__(self):
-        self.blockno = next(state.genblockid)
+        self.blockno = next(simulation.genblockid)
         self.transactions = set()
 
-        ind = len(state.blocks)
+        ind = len(simulation.blocks)
         assert (ind == self.blockno)
-        state.blocks.append(self)
+        simulation.blocks.append(self)
 
     def setup(self):
         for transaction in self.transactions:
@@ -145,13 +173,13 @@ class Block:
         self.transactions.clear()
 
     def enter(self, transaction):
-        print("Time:{:12.2f}".format(state.clock), "|", "Transaction Id {:6}".format(transaction.id), "|",
+        print("Time:{:12.2f}".format(simulation.state.clock), "|", "Transaction Id {:6}".format(transaction.id), "|",
               "Block No {:3}".format(self.blockno), "(", type(self).__name__, ")")
         return 1
 
     def enter_next_block(self, transaction):
-        fevent = (state.clock, self.blockno, self.blockno + 1, transaction)
-        heapq.heappush(state.FEL, fevent)
+        fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
+        heapq.heappush(simulation.state.FEL, fevent)
 
     def __repr__(self):
         s = "[{}({}): {}]".format(type(self).__name__, self.blockno, self.transactions)
@@ -182,11 +210,11 @@ class GenerateBlock(Block):
 
         inter_arrival = self.dist.bootstrap()
         # Debugging Setting
-        if state.debugging:
+        if simulation.debugging:
             print("Transaction Generation Time:", inter_arrival)
 
-        fevent = (inter_arrival + state.clock, -1, self.blockno, Transaction())
-        heapq.heappush(state.FEL, fevent)
+        fevent = (inter_arrival + simulation.state.clock, -1, self.blockno, Transaction())
+        heapq.heappush(simulation.state.FEL, fevent)
 
     def enter(self, transaction):
 
@@ -213,12 +241,12 @@ class TerminateBlock(Block):
         Block.enter(self, transaction)
 
         # Debugging Setting
-        if state.debugging:
+        if simulation.debugging:
             print("Transaction", transaction.id,
                   "Terminated with value of", self.decrement,
                   "at Block No:", self.blockno)
 
-        state.terminate_counter -= self.decrement
+        simulation.state.terminate_counter -= self.decrement
         self.transactions.clear()
 
 
@@ -236,15 +264,15 @@ class TransferBlock(Block):
 
         if self.prob.roll():
             # Debugging Setting
-            if state.debugging:
+            if simulation.debugging:
                 print("Transaction", transaction.id, "Passed Moving To Block", self.target_block)
 
-            fevent = (state.clock, self.blockno, self.target_block, transaction)
-            heapq.heappush(state.FEL, fevent)
+            fevent = (simulation.state.clock, self.blockno, self.target_block, transaction)
+            heapq.heappush(simulation.state.FEL, fevent)
 
         else:
             # Debugging Setting
-            if state.debugging:
+            if simulation.debugging:
                 print(transaction.id, "Failed to pass so")
             self.enter_next_block(transaction)
 
@@ -261,11 +289,11 @@ class AdvanceBlock(Block):
         advance = self.dist.bootstrap()
 
         # Debugging Setting
-        if state.debugging:
+        if simulation.debugging:
             print("Transaction:", transaction.id, "Moving to Block: ", self.blockno + 1, "With Delay of", advance)
 
-        fevent = (state.clock + advance, self.blockno, self.blockno + 1, transaction)
-        heapq.heappush(state.FEL, fevent)
+        fevent = (simulation.state.clock + advance, self.blockno, self.blockno + 1, transaction)
+        heapq.heappush(simulation.state.FEL, fevent)
 
 
 class LinkBlock(Block):
@@ -273,19 +301,19 @@ class LinkBlock(Block):
     def __init__(self, listname):
         Block.__init__(self)
         self.listname = listname
-        state.userlists[listname] = UserList()
+        simulation.state.userlists[listname] = UserList()
 
     def setup(self):
         Block.setup(self)
-        state.userlists[self.listname].waiting_transactions.clear()
+        simulation.state.userlists[self.listname].waiting_transactions.clear()
 
     def enter(self, transaction):
         Block.enter(self, transaction)
 
-        state.userlists[self.listname].waiting_transactions.append(transaction)
+        simulation.state.userlists[self.listname].waiting_transactions.append(transaction)
 
         # Debugging Setting
-        if state.debugging:
+        if simulation.debugging:
             print("Transaction", transaction.id, "Is Attached to", self.listname)
 
 
@@ -317,29 +345,29 @@ class UnlinkBlockFIFO(Block):
 
         Block.enter(self, transaction)
 
-        if len(state.userlists[self.listname].waiting_transactions) > 0:
+        if len(simulation.state.userlists[self.listname].waiting_transactions) > 0:
 
-            unlinked_transaction = state.userlists[self.listname].waiting_transactions.popleft()
+            unlinked_transaction = simulation.state.userlists[self.listname].waiting_transactions.popleft()
 
             # Debugging Setting
-            if state.debugging:
+            if simulation.debugging:
                 print("Transaction", transaction.id, "Unlinked the Transaction", unlinked_transaction.id, "From:",
                       self.listname, "Moving to Block:", self.target_block)
 
-            fevent = (state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
-            heapq.heappush(state.FEL, fevent)
+            fevent = (simulation.state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
+            heapq.heappush(simulation.state.FEL, fevent)
 
             self.enter_next_block(transaction)
 
         else:
 
             # Debugging Setting
-            if state.debugging:
+            if simulation.debugging:
                 print(transaction.id, "Could not unlink anything from the list moving to block:",
                       self.alternative_block)
 
-            fevent = (state.clock, self.blockno, self.alternative_block, transaction)
-            heapq.heappush(state.FEL, fevent)
+            fevent = (simulation.state.clock, self.blockno, self.alternative_block, transaction)
+            heapq.heappush(simulation.state.FEL, fevent)
 
 
 class UnlinkBlockLIFO(Block):
@@ -355,29 +383,29 @@ class UnlinkBlockLIFO(Block):
 
         Block.enter(self, transaction)
 
-        if len(state.userlists[self.listname].waiting_transactions) > 0:
+        if len(simulation.state.userlists[self.listname].waiting_transactions) > 0:
 
-            unlinked_transaction = state.userlists[self.listname].waiting_transactions.pop()
+            unlinked_transaction = simulation.state.userlists[self.listname].waiting_transactions.pop()
 
             # Debugging Setting
-            if state.debugging:
+            if simulation.debugging:
                 print(transaction.id, "Unlinked the", unlinked_transaction.id, "From:", self.listname, "Moving to:",
                       self.target_block)
 
-            fevent = (state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
-            heapq.heappush(state.FEL, fevent)
+            fevent = (simulation.state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
+            heapq.heappush(simulation.state.FEL, fevent)
 
             self.enter_next_block(transaction)
 
         else:
 
             # Debugging Setting
-            if state.debugging:
+            if simulation.debugging:
                 print(transaction.id, "Could not unlink anything from the list moving to block:",
                       self.alternative_block)
 
-            fevent = (state.clock, self.blockno, self.alternative_block, transaction)
-            heapq.heappush(state.FEL, fevent)
+            fevent = (simulation.state.clock, self.blockno, self.alternative_block, transaction)
+            heapq.heappush(simulation.state.FEL, fevent)
 
 
 class EnterBlock(Block):
@@ -391,25 +419,25 @@ class EnterBlock(Block):
 
     def enter(self, transaction):
 
-        if state.listdictionary[self.listname].enter(self.limit):
+        if simulation.listdictionary[self.listname].enter(self.limit):
 
             Block.enter(self, transaction)
             # Debugging Setting
-            if state.debugging:
+            if simulation.debugging:
                 print("Transaction:", transaction.id,
                       "Entered", self.listname,
-                      "at", state.clock,
-                      "Capacity Left Is ", state.listdictionary[self.listname].size_left())
+                      "at", simulation.state.clock,
+                      "Capacity Left Is ", simulation.listdictionary[self.listname].size_left())
 
-            fevent = (state.clock, self.blockno, self.blockno + 1, transaction)
-            heapq.heappush(state.FEL, fevent)
+            fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
+            heapq.heappush(simulation.state.FEL, fevent)
 
         else:
 
-            delayedevent = (state.clock, self.blockno - 1, self.blockno, transaction)
-            state.DEL.append(delayedevent)
+            delayedevent = (simulation.state.clock, self.blockno - 1, self.blockno, transaction)
+            simulation.state.DEL.append(delayedevent)
             # Debugging Setting
-            if state.debugging:
+            if simulation.debugging:
                 print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname)
 
 
@@ -425,12 +453,12 @@ class LeaveBlock(Block):
     def enter(self, transaction):
         Block.enter(self, transaction)
         # Debugging Setting
-        if state.debugging:
+        if simulation.debugging:
             print("Transaction:", transaction.id, "Left", self.listname)
 
-        fevent = (state.clock, self.blockno, self.blockno + 1, transaction)
-        heapq.heappush(state.FEL, fevent)
-        state.listdictionary[self.listname].leave(self.limit)
+        fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
+        heapq.heappush(simulation.state.FEL, fevent)
+        simulation.listdictionary[self.listname].leave(self.limit)
 
 
 class Storage():
@@ -443,7 +471,7 @@ class Storage():
         self.listname = listname
         self.left = storage
         self.limit = storage
-        state.listdictionary[self.listname] = self
+        simulation.listdictionary[self.listname] = self
 
     def size_left(self):
         return self.left

@@ -1,6 +1,4 @@
 import random
-import heapq
-import collections
 import math
 
 
