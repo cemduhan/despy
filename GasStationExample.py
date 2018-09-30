@@ -2,8 +2,8 @@ import despy as des
 
 
 def gasstation():
-    des.simulation.clear()
-    des.simulation.debug(False)
+    des.clear()
+    des.debug(False)
 
     des.Storage("GasStation", 5)  # Set Pump count to 5
     des.Storage("Cashier", 2)  # Set Cashier count to 2
@@ -21,7 +21,7 @@ def gasstation():
     des.LeaveBlock("GasStation", 1)  # 6 After all owner leaves the station
     des.TerminateBlock(1)  # 7 Car destroyed
 
-    des.simulation.set_terminate(7)
+    des.set_terminate(7)
 
     des.simulate()
 

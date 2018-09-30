@@ -157,6 +157,18 @@ def idgen():
 simulation = Despy()
 
 
+def clear():
+    simulation.clear()
+
+
+def debug(value):
+    simulation.debug(value)
+
+
+def set_terminate(value):
+    simulation.set_terminate(value)
+
+
 class Block:
 
     def __init__(self):
