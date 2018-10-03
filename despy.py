@@ -504,7 +504,7 @@ class Storage():
         self.left = self.left + storage
 
         if self.left > self.limit:
-            self.left = 0
+            self.left = self.limit
 
     def enter(self, storage):
         if self.check_availability(storage):
