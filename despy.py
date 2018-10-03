@@ -101,13 +101,13 @@ class Despy:
 
     def set_terminate(self, count):
         if count <= 0:
-            assert 0, "Please enter a terminate counter that is greater than 0"
+            raise Exception( "Please enter a terminate counter that is greater than 0")
         else:
             self.state.terminate_counter = count
 
     def debug(self, value):
         if type(value) != bool:
-            assert 0, "Please a bool type value for debug"
+            raise Exception( "Please a bool type value for debug")
         else:
             self.debugging=value
 
@@ -209,7 +209,7 @@ class GenerateBlock(Block):
         if (self.variety == 'NoDelay') and (lowest_interarrival > 0):
             self.limit = math.floor(lowest_interarrival)
         elif (self.variety == 'NoDelay') and (lowest_interarrival <= 0):
-            assert 0, "Bad Limit Value: " + str(math.floor(lowest_interarrival)) + " Should be greater than 0"
+            raise Exception( "Bad Limit Value: " + math.floor(lowest_interarrival) + " Should be greater than 0")
 
     def setup(self):
         Block.setup(self)
@@ -246,7 +246,7 @@ class TerminateBlock(Block):
         Block.__init__(self)
         self.decrement = decrement
         if self.decrement < 0:
-            assert 0, "Bad Decrement Value: " + str(self.decrement) + "Should be between greater than 0"
+            raise Exception( "Bad Decrement Value: " + self.decrement + "Should be between greater than 0")
 
     def enter(self, transaction):
 
@@ -339,7 +339,7 @@ class UnlinkBlock(object):
             unlink = UnlinkBlockLIFO(listname, target_block, alternative_block)
             return unlink
 
-        assert 0, "Bad Distribution: " + variety
+        raise Exception( "Bad Distribution: " + variety)
 
     factory = staticmethod(factory)
 
@@ -422,12 +422,13 @@ class UnlinkBlockLIFO(Block):
 
 class EnterBlock(Block):
 
-    def __init__(self, listname, limit):
+    def __init__(self, listname, limit, in_case_block=-1):
+        self.in_case_block = in_case_block
         self.limit = limit
         self.listname = listname
         Block.__init__(self)
         if self.limit <= 0:
-            assert 0, "Bad Que Size Value: " + str(self.limit) + " Should be greater than 0"
+            raise Exception( "Bad Que Size Value: " + self.limit + " Should be greater than 0")
 
     def enter(self, transaction):
 
@@ -445,12 +446,17 @@ class EnterBlock(Block):
             heapq.heappush(simulation.state.FEL, fevent)
 
         else:
-
-            delayedevent = (simulation.state.clock, self.blockno - 1, self.blockno, transaction)
-            simulation.state.DEL.append(delayedevent)
-            # Debugging Setting
-            if simulation.debugging:
-                print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname)
+            if self.in_case_block == -1:
+                delayedevent = (simulation.state.clock, self.blockno - 1, self.blockno, transaction)
+                simulation.state.DEL.append(delayedevent)
+                # Debugging Setting
+                if simulation.debugging:
+                    print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname)
+            else:
+                fevent = (simulation.state.clock, self.blockno, self.in_case_block, transaction)
+                heapq.heappush(simulation.state.FEL, fevent)
+                if simulation.debugging:
+                    print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname, "Transaction moved to Block No:", self.in_case_block, "(", type(simulation.blocks[self.in_case_block]).__name__, ")")
 
 
 class LeaveBlock(Block):
@@ -459,7 +465,7 @@ class LeaveBlock(Block):
         self.limit = limit
         Block.__init__(self)
         if self.limit < 0:
-            assert 0, "Bad Limit Value: " + str(self.limit) + " Should be greater than 0"
+            raise Exception( "Bad Limit Value: " + self.limit + " Should be greater than 0")
         self.listname = listname
 
     def enter(self, transaction):

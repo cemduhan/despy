@@ -1,6 +1,4 @@
 import despy as des
-from matplotlib import pyplot
-from matplotlib.pyplot import hist, title, xlabel, ylabel, xlim, ylim
 
 
 def empirical_generate_test_valid_file():
