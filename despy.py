@@ -55,17 +55,19 @@ def simulate():
 
 class Transaction:
 
-    def __init__(self):
+    def __init__(self, assemble_id=-1):
 
         self.id = next(simulation.genid)
         self.current_block = -1
+        self.assembly = assemble_id
+
+        if assemble_id == -1:
+            self.assembly = self.id
+
 
     def __repr__(self):
 
-        if hasattr(self, "A1"):
-            return 'XN:{}(A1={})'.format(self.id, self.A1)
-        else:
-            return 'XN:{}'.format(self.id)
+        return 'XN:{}(A1={})'.format(self.id, self.assembly)
 
     # make this sortable - just an implementation detail
     def __lt__(self, other):
@@ -522,3 +524,32 @@ class Storage():
     def leave(self, storage):
         self.inc_limit(storage)
         return True
+
+
+class SplitBlock(Block):
+
+    def __init__(self, how_many, alternate_block=-1):
+        Block.__init__(self)
+        self.many = how_many
+        if alternate_block == -1:
+            self.alternate_block = self.blockno + 1
+        else:
+            self.alternate_block = alternate_block
+
+    def setup(self):
+        Block.setup(self)
+
+    def enter(self, transaction):
+        Block.enter(self, transaction)
+        #original transaction
+        fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
+        heapq.heappush(simulation.state.FEL, fevent)
+
+        #created alternate trans actions and move them to targeted blocks
+        for i in self.many:
+            fevent = (simulation.state.clock, self.blockno, self.alternate_block, Transaction(transaction.assembly))
+            heapq.heappush(simulation.state.FEL, fevent)
+
+        # Debugging Setting
+        if simulation.debugging:
+            print("Transaction", transaction.id, "Is Attached to", self.listname)
