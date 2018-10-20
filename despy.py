@@ -56,7 +56,6 @@ def simulate():
 class Transaction:
 
     def __init__(self, assemble_id=-1):
-
         self.id = next(simulation.genid)
         self.current_block = -1
         self.assembly = assemble_id
@@ -64,15 +63,15 @@ class Transaction:
         if assemble_id == -1:
             self.assembly = self.id
 
-
     def __repr__(self):
-
         return 'XN:{}(A1={})'.format(self.id, self.assembly)
 
     # make this sortable - just an implementation detail
     def __lt__(self, other):
-
         return self.id < other.id
+
+    def __eq__(self, other):
+        return self.assembly < other.assembly
 
 
 class UserList:
@@ -103,15 +102,15 @@ class Despy:
 
     def set_terminate(self, count):
         if count <= 0:
-            raise Exception( "Please enter a terminate counter that is greater than 0")
+            raise Exception("Please enter a terminate counter that is greater than 0")
         else:
             self.state.terminate_counter = count
 
     def debug(self, value):
         if type(value) != bool:
-            raise Exception( "Please a bool type value for debug")
+            raise Exception("Please a bool type value for debug")
         else:
-            self.debugging=value
+            self.debugging = value
 
     def __repr__(self):
         s = "\nSimulation:\n"
@@ -211,7 +210,7 @@ class GenerateBlock(Block):
         if (self.variety == 'NoDelay') and (lowest_interarrival > 0):
             self.limit = math.floor(lowest_interarrival)
         elif (self.variety == 'NoDelay') and (lowest_interarrival <= 0):
-            raise Exception( "Bad Limit Value: " + math.floor(lowest_interarrival) + " Should be greater than 0")
+            raise Exception("Bad Limit Value: " + math.floor(lowest_interarrival) + " Should be greater than 0")
 
     def setup(self):
         Block.setup(self)
@@ -248,7 +247,7 @@ class TerminateBlock(Block):
         Block.__init__(self)
         self.decrement = decrement
         if self.decrement < 0:
-            raise Exception( "Bad Decrement Value: " + self.decrement + "Should be between greater than 0")
+            raise Exception("Bad Decrement Value: " + self.decrement + "Should be between greater than 0")
 
     def enter(self, transaction):
 
@@ -341,7 +340,7 @@ class UnlinkBlock(object):
             unlink = UnlinkBlockLIFO(listname, target_block, alternative_block)
             return unlink
 
-        raise Exception( "Bad Distribution: " + variety)
+        raise Exception("Bad Distribution: " + variety)
 
     factory = staticmethod(factory)
 
@@ -368,7 +367,8 @@ class UnlinkBlockFIFO(Block):
                 print("Transaction", transaction.id, "Unlinked the Transaction", unlinked_transaction.id, "From:",
                       self.listname, "Moving to Block:", self.target_block)
 
-            fevent = (simulation.state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
+            fevent = (
+            simulation.state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
             heapq.heappush(simulation.state.FEL, fevent)
 
             self.enter_next_block(transaction)
@@ -406,7 +406,8 @@ class UnlinkBlockLIFO(Block):
                 print(transaction.id, "Unlinked the", unlinked_transaction.id, "From:", self.listname, "Moving to:",
                       self.target_block)
 
-            fevent = (simulation.state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
+            fevent = (
+            simulation.state.clock, unlinked_transaction.current_block, self.target_block, unlinked_transaction)
             heapq.heappush(simulation.state.FEL, fevent)
 
             self.enter_next_block(transaction)
@@ -430,7 +431,7 @@ class EnterBlock(Block):
         self.listname = listname
         Block.__init__(self)
         if self.limit <= 0:
-            raise Exception( "Bad Que Size Value: " + self.limit + " Should be greater than 0")
+            raise Exception("Bad Que Size Value: " + self.limit + " Should be greater than 0")
 
     def enter(self, transaction):
 
@@ -458,7 +459,9 @@ class EnterBlock(Block):
                 fevent = (simulation.state.clock, self.blockno, self.in_case_block, transaction)
                 heapq.heappush(simulation.state.FEL, fevent)
                 if simulation.debugging:
-                    print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname, "Transaction moved to Block No:", self.in_case_block, "(", type(simulation.blocks[self.in_case_block]).__name__, ")")
+                    print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname,
+                          "Transaction moved to Block No:", self.in_case_block, "(",
+                          type(simulation.blocks[self.in_case_block]).__name__, ")")
 
 
 class LeaveBlock(Block):
@@ -467,7 +470,7 @@ class LeaveBlock(Block):
         self.limit = limit
         Block.__init__(self)
         if self.limit < 0:
-            raise Exception( "Bad Limit Value: " + self.limit + " Should be greater than 0")
+            raise Exception("Bad Limit Value: " + self.limit + " Should be greater than 0")
         self.listname = listname
 
     def enter(self, transaction):
@@ -481,7 +484,7 @@ class LeaveBlock(Block):
         simulation.listdictionary[self.listname].leave(self.limit)
 
 
-class Storage():
+class Storage:
 
     def __repr__(self):
         s = "[Limit:{} : Left:{}]".format(self.limit, self.left)
@@ -541,14 +544,76 @@ class SplitBlock(Block):
 
     def enter(self, transaction):
         Block.enter(self, transaction)
-        #original transaction
+        # original transaction
         fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
         heapq.heappush(simulation.state.FEL, fevent)
 
-        #created alternate trans actions and move them to targeted blocks
+        # created alternate trans actions and move them to targeted blocks
         for i in self.many:
             fevent = (simulation.state.clock, self.blockno, self.alternate_block, Transaction(transaction.assembly))
             heapq.heappush(simulation.state.FEL, fevent)
+
+        # Debugging Setting
+        if simulation.debugging:
+            print("Transaction", transaction.id, "Is Attached to", self.listname)
+
+
+class AssembleBlock(Block):
+
+    def __init__(self):
+        Block.__init__(self)
+
+    def setup(self):
+        Block.setup(self)
+
+    def enter(self, transaction):
+        Block.enter(self, transaction)
+        # original transaction
+        fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
+        heapq.heappush(simulation.state.FEL, fevent)
+
+        for event in simulation.state.FEL:
+            if event[3].assambly == transaction.assembly and event[3].id != transaction.id:
+                simulation.state.DEL.remove(event)
+
+        for event in simulation.state.DEL:
+            if event[3].assambly == transaction.assembly and event[3].id != transaction.id:
+                simulation.state.DEL.remove(event)
+
+        # Debugging Setting
+        if simulation.debugging:
+            print("Transaction", transaction.id, "Is Attached to", self.listname)
+
+
+class DisplaceBlock(Block):
+
+    def __init__(self, alternate_block=-1):
+        Block.__init__(self)
+        self.alternate_block = self.blockno + 1;
+
+        if alternate_block != -1:
+            self.alternate_block = alternate_block
+
+    def setup(self):
+        Block.setup(self)
+
+    def enter(self, transaction):
+        Block.enter(self, transaction)
+        # original transaction
+        fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
+        heapq.heappush(simulation.state.FEL, fevent)
+
+        for event in simulation.state.FEL:
+            if event[3].assambly == transaction.assembly and event[3].id != transaction.id:
+                simulation.state.DEL.remove(event)
+                fevent = (simulation.state.clock, self.blockno, self.alternate_block, event[3])
+                heapq.heappush(simulation.state.FEL, fevent)
+
+        for event in simulation.state.DEL:
+            if event[3].assambly == transaction.assembly and event[3].id != transaction.id:
+                simulation.state.DEL.remove(event)
+                fevent = (simulation.state.clock, self.blockno, self.alternate_block, event[3])
+                heapq.heappush(simulation.state.FEL, fevent)
 
         # Debugging Setting
         if simulation.debugging:
