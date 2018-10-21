@@ -17,6 +17,7 @@ def simulate():
         print("--------------------------------------------------------------------------")
         # Debugging Setting
         if simulation.debugging:
+            print("simulation:\n", simulation)
             print("simulation.state:\n", simulation.state)
 
         print("Normal Events")
@@ -64,15 +65,17 @@ class Transaction:
             self.assembly = self.id
 
     def __repr__(self):
-        return 'XN:{}(A1={})'.format(self.id, self.assembly)
+        return 'XN:{}(Assembly ={})'.format(self.id, self.assembly)
 
     # make this sortable - just an implementation detail
     def __lt__(self, other):
         return self.id < other.id
 
     def __eq__(self, other):
-        return self.assembly < other.assembly
+        return self.id == other.id
 
+    def __hash__(self):
+        return hash(self.id)
 
 class UserList:
 
@@ -547,15 +550,19 @@ class SplitBlock(Block):
         # original transaction
         fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
         heapq.heappush(simulation.state.FEL, fevent)
-
+        string = ""
         # created alternate trans actions and move them to targeted blocks
-        for i in self.many:
-            fevent = (simulation.state.clock, self.blockno, self.alternate_block, Transaction(transaction.assembly))
+        for i in range (0, self.many):
+            trx = Transaction(transaction.assembly)
+            Block.enter(self, trx)
+            self.transactions.add(trx)
+            string = string + str(trx.id) + "\t"
+            fevent = (simulation.state.clock, self.blockno, self.alternate_block, trx)
             heapq.heappush(simulation.state.FEL, fevent)
 
         # Debugging Setting
         if simulation.debugging:
-            print("Transaction", transaction.id, "Is Attached to", self.listname)
+            print("Transaction", transaction.id, "with assembly number", transaction.assembly, "Split into", self.many, "transactions with id/s of", string)
 
 
 class AssembleBlock(Block):
@@ -571,18 +578,21 @@ class AssembleBlock(Block):
         # original transaction
         fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
         heapq.heappush(simulation.state.FEL, fevent)
-
+        string = ""
         for event in simulation.state.FEL:
-            if event[3].assambly == transaction.assembly and event[3].id != transaction.id:
-                simulation.state.DEL.remove(event)
+            if event[3].assembly == transaction.assembly and event[3].id != transaction.id:
+                simulation.state.FEL.remove(event)
+                simulation.blocks[event[1]].transactions.remove(event[3])
+                string = string + str(event[3].id) + "\t"
 
         for event in simulation.state.DEL:
-            if event[3].assambly == transaction.assembly and event[3].id != transaction.id:
+            if event[3].assembly == transaction.assembly and event[3].id != transaction.id:
                 simulation.state.DEL.remove(event)
+                string = string + str(event[3].id) + "\t"
 
         # Debugging Setting
         if simulation.debugging:
-            print("Transaction", transaction.id, "Is Attached to", self.listname)
+            print("Transaction", transaction.id, "with assembly number", transaction.assembly, "gathered all other transactions with id/s of", string)
 
 
 class DisplaceBlock(Block):
@@ -602,19 +612,24 @@ class DisplaceBlock(Block):
         # original transaction
         fevent = (simulation.state.clock, self.blockno, self.blockno + 1, transaction)
         heapq.heappush(simulation.state.FEL, fevent)
-
+        string = ""
         for event in simulation.state.FEL:
-            if event[3].assambly == transaction.assembly and event[3].id != transaction.id:
-                simulation.state.DEL.remove(event)
+            if event[3].assembly == transaction.assembly and event[3].id != transaction.id:
+                simulation.state.FEL.remove(event)
+                simulation.blocks[event[1]].transactions.remove(event[3])
+                self.transactions.add(event[3])
                 fevent = (simulation.state.clock, self.blockno, self.alternate_block, event[3])
                 heapq.heappush(simulation.state.FEL, fevent)
+                string = string + str(event[3].id) + "\t displaced to" + event[2].type(self).__name__
 
         for event in simulation.state.DEL:
-            if event[3].assambly == transaction.assembly and event[3].id != transaction.id:
+            if event[3].assembly == transaction.assembly and event[3].id != transaction.id:
                 simulation.state.DEL.remove(event)
+                self.transactions.add(event[3])
                 fevent = (simulation.state.clock, self.blockno, self.alternate_block, event[3])
                 heapq.heappush(simulation.state.FEL, fevent)
+                string = string + str(event[3].id) + "\t displaced to" + event[2].type(self).__name__
 
         # Debugging Setting
         if simulation.debugging:
-            print("Transaction", transaction.id, "Is Attached to", self.listname)
+            print("Transaction", transaction.id, "with assembly number", transaction.assembly, "displaced transactions with id/s of", string)
