@@ -148,8 +148,8 @@ def transferblock_test_with_nothing_passing():
 
 #######################################################################################
 
-def split_block():
-    print("TransferBlock_Test_With_Nothing_Passing")
+def split_assamble_block():
+    print("Split_Block_With_Assemble")
     des.clear()
     des.debug(True)
 
@@ -164,6 +164,22 @@ def split_block():
 
     des.simulate()
 
+
+def split_block():
+    print("Split_Block_With_Displace_Assemble")
+    des.clear()
+    des.debug(True)
+
+    des.GenerateBlock('Uniform', 25, 25, 1.2)  # 0
+    des.SplitBlock(2, 4)
+    des.AdvanceBlock('Uniform', 3, 3)  # 1
+    des.AssembleBlock()    # 2
+    des.AdvanceBlock('Uniform', 5, 5)  # 1
+    des.TerminateBlock(1)  # 3
+
+    des.set_terminate(2)
+
+    des.simulate()
 #######################################################################################
 
 
