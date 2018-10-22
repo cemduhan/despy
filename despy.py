@@ -94,6 +94,7 @@ class Despy:
         self.debugging = False
         self.userlists = {}
         self.listdictionary = {}
+        self.block_set = set()
         self.blocks = []
         self.genid = idgen()
         self.genblockid = idgen()
@@ -118,6 +119,7 @@ class Despy:
     def __repr__(self):
         s = "\nSimulation:\n"
         s += "  ulists: {0}\n".format(str(self.userlists))
+        s += "  blockset: {0}\n".format(str(self.block_set))
         s += "  storages:{0}\n".format(self.listdictionary)
         s += "  blocks:\n"
         for i, block in enumerate(self.blocks):
@@ -175,9 +177,15 @@ def set_terminate(value):
 
 class Block:
 
-    def __init__(self):
+    def __init__(self, name="NULL"):
         self.blockno = next(simulation.genblockid)
         self.transactions = set()
+        self.name = name
+
+        if self.name == "NULL":
+            self.name = self.name + str(self.blockno)
+
+        simulation.block_set.add(self)
 
         ind = len(simulation.blocks)
         assert (ind == self.blockno)
@@ -201,13 +209,23 @@ class Block:
         s = "[{}({}): {}]".format(type(self).__name__, self.blockno, self.transactions)
         return s
 
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
 
 class GenerateBlock(Block):
 
-    def __init__(self, variety='Uniform', lowest_interarrival=1, highest_interarrival=15, seed=100.99107, mulp=42.4242,
+    def __init__(self, name, variety='Uniform', lowest_interarrival=1, highest_interarrival=15, seed=100.99107, mulp=42.4242,
                  add=1001.1199):
 
-        Block.__init__(self)
+        Block.__init__(self, name)
+        self.name = name
         self.dist = dis.Distribution.factory(variety, lowest_interarrival, highest_interarrival, seed, mulp, add)
         self.variety = variety
         if (self.variety == 'NoDelay') and (lowest_interarrival > 0):
@@ -245,9 +263,10 @@ class GenerateBlock(Block):
 
 class TerminateBlock(Block):
 
-    def __init__(self, decrement):
+    def __init__(self, name, decrement):
 
-        Block.__init__(self)
+        Block.__init__(self, name)
+        self.name = name
         self.decrement = decrement
         if self.decrement < 0:
             raise Exception("Bad Decrement Value: " + self.decrement + "Should be between greater than 0")
@@ -268,10 +287,12 @@ class TerminateBlock(Block):
 
 class TransferBlock(Block):
 
-    def __init__(self, probability, target_block):
+    def __init__(self, name, probability, target_block):
 
-        Block.__init__(self)
+        Block.__init__(self, name)
+        self.name = name
         self.target_block = target_block
+        self.target_block_no = 0
         self.prob = dis.Probability(probability / 100)
 
     def enter(self, transaction):
@@ -283,7 +304,12 @@ class TransferBlock(Block):
             if simulation.debugging:
                 print("Transaction", transaction.id, "Passed Moving To Block", self.target_block)
 
-            fevent = (simulation.state.clock, self.blockno, self.target_block, transaction)
+            for x in simulation.block_set:
+                    if x.name == self.target_block:
+                        self.target_block_no = x.blockno
+                        break
+
+            fevent = (simulation.state.clock, self.blockno, self.target_block_no, transaction)
             heapq.heappush(simulation.state.FEL, fevent)
 
         else:
@@ -295,9 +321,9 @@ class TransferBlock(Block):
 
 class AdvanceBlock(Block):
 
-    def __init__(self, variety, lowest_interarrival=0, highest_interarrival=15, seed=100.99107, mulp=42.4242,
+    def __init__(self, name, variety, lowest_interarrival=0, highest_interarrival=15, seed=100.99107, mulp=42.4242,
                  add=1001.1199):
-        Block.__init__(self)
+        Block.__init__(self, name)
         self.dist = dis.Distribution.factory(variety, lowest_interarrival, highest_interarrival, seed, mulp, add)
 
     def enter(self, transaction):
@@ -314,8 +340,9 @@ class AdvanceBlock(Block):
 
 class LinkBlock(Block):
 
-    def __init__(self, listname):
-        Block.__init__(self)
+    def __init__(self, name, listname):
+        Block.__init__(self, name)
+        self.name = name
         self.listname = listname
         simulation.state.userlists[listname] = UserList()
 
@@ -350,9 +377,10 @@ class UnlinkBlock(object):
 
 class UnlinkBlockFIFO(Block):
 
-    def __init__(self, listname, target_block, alternative_block):
+    def __init__(self, name, listname, target_block, alternative_block):
 
-        Block.__init__(self)
+        Block.__init__(self, name)
+        self.name = name
         self.listname = listname
         self.target_block = target_block
         self.alternative_block = alternative_block
@@ -389,9 +417,9 @@ class UnlinkBlockFIFO(Block):
 
 class UnlinkBlockLIFO(Block):
 
-    def __init__(self, listname, target_block, alternative_block):
+    def __init__(self, name, listname, target_block, alternative_block):
 
-        Block.__init__(self)
+        Block.__init__(self, name)
         self.listname = listname
         self.target_block = target_block
         self.alternative_block = alternative_block
@@ -428,11 +456,12 @@ class UnlinkBlockLIFO(Block):
 
 class EnterBlock(Block):
 
-    def __init__(self, listname, limit, in_case_block=-1):
+    def __init__(self, name, listname, limit, in_case_block="NULL"):
         self.in_case_block = in_case_block
+        self.target = 0
         self.limit = limit
         self.listname = listname
-        Block.__init__(self)
+        Block.__init__(self, name)
         if self.limit <= 0:
             raise Exception("Bad Que Size Value: " + self.limit + " Should be greater than 0")
 
@@ -452,26 +481,30 @@ class EnterBlock(Block):
             heapq.heappush(simulation.state.FEL, fevent)
 
         else:
-            if self.in_case_block == -1:
+            if self.in_case_block == "NULL":
                 delayedevent = (simulation.state.clock, self.blockno - 1, self.blockno, transaction)
                 simulation.state.DEL.append(delayedevent)
                 # Debugging Setting
                 if simulation.debugging:
                     print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname)
             else:
-                fevent = (simulation.state.clock, self.blockno, self.in_case_block, transaction)
+                for x in simulation.block_set:
+                    if x.name == self.in_case_block:
+                        self.target = x.blockno
+                        break
+                fevent = (simulation.state.clock, self.blockno, self.target, transaction)
                 heapq.heappush(simulation.state.FEL, fevent)
                 if simulation.debugging:
                     print("Transaction:", transaction.id, "Couldn't enter there is no capacity at:", self.listname,
                           "Transaction moved to Block No:", self.in_case_block, "(",
-                          type(simulation.blocks[self.in_case_block]).__name__, ")")
+                          type(simulation.blocks[self.target]).__name__, ")")
 
 
 class LeaveBlock(Block):
 
-    def __init__(self, listname, limit=0):
+    def __init__(self, name, listname, limit=0):
         self.limit = limit
-        Block.__init__(self)
+        Block.__init__(self, name)
         if self.limit < 0:
             raise Exception("Bad Limit Value: " + self.limit + " Should be greater than 0")
         self.listname = listname
@@ -534,8 +567,8 @@ class Storage:
 
 class SplitBlock(Block):
 
-    def __init__(self, how_many, alternate_block=-1):
-        Block.__init__(self)
+    def __init__(self, name, how_many, alternate_block=-1):
+        Block.__init__(self, name)
         self.many = how_many
         if alternate_block == -1:
             self.alternate_block = self.blockno + 1
@@ -567,8 +600,8 @@ class SplitBlock(Block):
 
 class AssembleBlock(Block):
 
-    def __init__(self):
-        Block.__init__(self)
+    def __init__(self, name):
+        Block.__init__(self, name)
 
     def setup(self):
         Block.setup(self)
@@ -597,8 +630,8 @@ class AssembleBlock(Block):
 
 class DisplaceBlock(Block):
 
-    def __init__(self, alternate_block=-1):
-        Block.__init__(self)
+    def __init__(self, name, alternate_block=-1):
+        Block.__init__(self, name)
         self.alternate_block = self.blockno + 1;
 
         if alternate_block != -1:
