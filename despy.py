@@ -1,3 +1,4 @@
+# Author: Dr. Damien J. Duff
 # Author: Cem Karagöz - 150130066
 import heapq
 import math
@@ -76,6 +77,7 @@ class Transaction:
 
     def __hash__(self):
         return hash(self.id)
+
 
 class UserList:
 
@@ -666,3 +668,104 @@ class DisplaceBlock(Block):
         # Debugging Setting
         if simulation.debugging:
             print("Transaction", transaction.id, "with assembly number", transaction.assembly, "displaced transactions with id/s of", string)
+
+
+class Stat:
+    def __init__(self):
+        self.id
+        self.assembly
+        self.clock
+
+    def __lt__(self, other):
+        return self.id < other.id
+
+    def __eq__(self, other):
+        return self.id == other.id and self.assembly == other.assembly
+
+    def __hash__(self):
+        return hash(self.id)
+
+
+class QueueBlock(Block):
+
+    def __init__(self, name):
+        Block.__init__(self, name)
+        self.QueueList = set()
+        self.AvGWait = 0
+        self.LongestWait = 0
+        self.trxnum = 0
+        self.MaxTrx = 0
+        self.CurrentNum = 0
+
+    def __repr__(self):
+        s = "[AvgWait:{} : LongestWait:{} : MaxInQue:{} : TotalLeft:{}]".format(self.AvGWait, self.LongestWait, self.MaxTrx, self.trxnum)
+        return s
+
+    def setup(self):
+        Block.setup(self)
+
+    def enter(self, transaction):
+        Stat.clock = simulation.state.clock
+        Stat.id = transaction.id
+        Stat.assembly = transaction.assembly
+
+        self.CurrentNum = self.CurrentNum + 1
+
+        if self.CurrentNum > self.MaxTrx:
+            self.MaxTrx = self.CurrentNum
+
+        self.QueueList.add(Stat)
+        self.enter_next_block(transaction)
+
+        # Debugging Setting
+        if simulation.debugging:
+            print("Transaction", transaction.id, "entered the", self.name, "stat block")
+
+    def removefromque(self, transaction):
+
+        Stat.clock = simulation.state.clock
+        Stat.id = transaction.id
+        Stat.assembly = transaction.assembly
+
+        target = 0
+        for x in self.QueueList:
+                    if x.id == transaction.id and transaction.assembly == x.assembly:
+                        target = x.clock
+                        break
+
+        try:
+            self.QueueList.remove(Stat)
+        except:
+            opps=1
+
+        self.AvGWait = (self.AvGWait * self.trxnum + (simulation.state.clock - target))/(self.trxnum+1)
+
+        if self.LongestWait < simulation.state.clock - target:
+            self.LongestWait = simulation.state.clock - target
+
+        self.trxnum = self.trxnum + 1
+        self.CurrentNum = self.CurrentNum - 1
+
+
+class LeaveQueueBlock(Block):
+
+    def __init__(self, name, queuename):
+        Block.__init__(self, name)
+        self.queuename = queuename
+        self.target = -1
+
+    def setup(self):
+        Block.setup(self)
+
+    def enter(self, transaction):
+
+        for x in simulation.block_set:
+                    if x.name == self.queuename:
+                        self.target = x.blockno
+                        break
+        simulation.blocks[self.target].removefromque(transaction)
+        self.enter_next_block(transaction)
+
+        # Debugging Setting
+        if simulation.debugging:
+            print("Transaction", transaction.id, "left the", self.name, "stat block")

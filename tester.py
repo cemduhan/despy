@@ -181,7 +181,24 @@ def split_block():
 
     des.simulate()
 #######################################################################################
+def queue_block():
+    print("Queue_Block")
+    des.clear()
+    des.debug(True)
+
+    des.GenerateBlock('UniformCreator', 'Uniform', 1, 1, 1.2)
+    des.QueueBlock('QueWait')
+    des.AdvanceBlock('Uniform', 'Uniform', 1, 25)
+    des.LeaveQueueBlock('QueWaitLeave', 'QueWait')
+    des.TerminateBlock('Terminator', 1)
+
+    des.set_terminate(12)
+
+    des.simulate()
 
 
+
+
+#######################################################################################
 if __name__ == "__main__":
-    split_block()
+    queue_block()

@@ -24,7 +24,7 @@ class Distribution(object):
             dist = NoDelayDistribution()
             return dist
 
-        raise Exception("Bad Distribution: " + variety)
+        raise Exception("Bad Distribution: " + str(variety))
 
     factory = staticmethod(factory)
 
@@ -165,7 +165,7 @@ class EmpiricalDistribution(Distribution):
             self.length = len(self.content)
             self.length = self.length - 1
         except (RuntimeError, TypeError, NameError):
-            raise Exception("No such file or directory:" + self.filename)
+            raise Exception("No such file or directory:" + str(self.filename))
 
 
 class NoDelayDistribution(Distribution):
