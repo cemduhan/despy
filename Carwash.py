@@ -4,8 +4,8 @@ import despy as des
 def carwash():
     des.clear()
 
-    des.Storage("Carwash", 1)
-    # There is only one carwash slot
+    des.Storage("Carwash", 2)
+    # There is only two carwash slot
     des.GenerateBlock("GenerateCars", "Uniform", 0, 14)
     # Cars get in the carwash every 0 to 14 minutes
     des.EnterBlock("CarwashEnter", "Carwash", 1)
