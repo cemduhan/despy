@@ -3,6 +3,7 @@
 import heapq
 import math
 from collections import deque
+
 import distribution as dis
 
 
@@ -120,12 +121,11 @@ class Despy:
 
     def __repr__(self):
         s = "\nSimulation:\n"
-        s += "  ulists: {0}\n".format(str(self.userlists))
-        s += "  blockset: {0}\n".format(str(self.block_set))
+        s += "  userlists: {0}\n".format(str(self.userlists))
         s += "  storages:{0}\n".format(self.listdictionary)
         s += "  blocks:\n"
         for i, block in enumerate(self.blocks):
-            s += "        {0: 3}: {1}\n".format(i, block)
+            s += "        {}: {}\n".format(i, block)
         return s
 
 
@@ -208,7 +208,7 @@ class Block:
         heapq.heappush(simulation.state.FEL, fevent)
 
     def __repr__(self):
-        s = "[{}({}): {}]".format(type(self).__name__, self.blockno, self.transactions)
+        s = "[{}: {}:{}]".format(type(self).__name__, self.name, self.transactions)
         return s
 
     def __lt__(self, other):
@@ -683,7 +683,7 @@ class Stat:
         return self.id == other.id and self.assembly == other.assembly
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(str(self.id) + str(self.assembly))
 
 
 class QueueBlock(Block):
@@ -698,7 +698,8 @@ class QueueBlock(Block):
         self.CurrentNum = 0
 
     def __repr__(self):
-        s = "[AvgWait:{} : LongestWait:{} : MaxInQue:{} : TotalLeft:{}]".format(self.AvGWait, self.LongestWait, self.MaxTrx, self.trxnum)
+        s = Block.__repr__(self)
+        s = s + "[AvgWait:{} : LongestWait:{} : MaxInQue:{} : TotalLeft:{}]".format(self.AvGWait, self.LongestWait, self.MaxTrx, self.trxnum)
         return s
 
     def setup(self):
@@ -711,7 +712,7 @@ class QueueBlock(Block):
 
         self.CurrentNum = self.CurrentNum + 1
 
-        if self.CurrentNum > self.MaxTrx:
+        if self.CurrentNum >= self.MaxTrx:
             self.MaxTrx = self.CurrentNum
 
         self.QueueList.add(Stat)
